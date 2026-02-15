@@ -10,6 +10,7 @@ import {
   Link2,
   LogOut,
   Shield,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <span className="text-sm font-semibold">Data Halal</span>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => navigate("/profile")} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {user?.email?.split("@")[0]}
+            </button>
             <span className="text-xs text-muted-foreground capitalize">{role}</span>
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
@@ -115,8 +119,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="border-t p-3">
-          <div className="mb-2 text-xs text-muted-foreground truncate">{user?.email}</div>
-          <div className="mb-2 text-xs font-medium capitalize">{role?.replace("_", " ")}</div>
+          <button
+            onClick={() => navigate("/profile")}
+            className="mb-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+          >
+            <UserCog className="h-4 w-4" />
+            <div className="text-left">
+              <div className="truncate text-xs">{user?.email}</div>
+              <div className="text-xs font-medium capitalize">{role?.replace("_", " ")}</div>
+            </div>
+          </button>
           <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
             <LogOut className="mr-2 h-4 w-4" />
             Keluar

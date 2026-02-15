@@ -13,11 +13,17 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2, Download, Loader2 } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, Enums } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
+
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
+  belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
+  lengkap: { label: "Lengkap", variant: "secondary", icon: CheckCircle2 },
+  terverifikasi: { label: "Terverifikasi", variant: "default", icon: ShieldCheck },
+};
 
 interface MemberWithProfile {
   id: string;
@@ -114,6 +120,15 @@ export default function GroupDetail() {
   const handleDeleteEntry = async (entryId: string) => {
     await supabase.from("data_entries").delete().eq("id", entryId);
     fetchEntries();
+  };
+
+  const handleStatusChange = async (entryId: string, status: string) => {
+    const { error } = await supabase.from("data_entries").update({ status } as any).eq("id", entryId);
+    if (error) {
+      toast({ title: "Gagal mengubah status", description: error.message, variant: "destructive" });
+    } else {
+      setEntries((prev) => prev.map((e) => e.id === entryId ? { ...e, status } as any : e));
+    }
   };
 
   const handleEntrySaved = () => {
@@ -245,12 +260,14 @@ export default function GroupDetail() {
                             </TableHead>
                           )}
                           <TableHead>Nama</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead>Alamat</TableHead>
                           <TableHead>No HP</TableHead>
                           <TableHead>KTP</TableHead>
                           <TableHead>NIB</TableHead>
                           <TableHead>Produk</TableHead>
                           <TableHead>Verifikasi</TableHead>
+                          <TableHead className="w-20"></TableHead>
                           <TableHead className="w-20"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -266,6 +283,33 @@ export default function GroupDetail() {
                               </TableCell>
                             )}
                             <TableCell className="font-medium cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nama || "-"}</TableCell>
+                            <TableCell>
+                              {canDownload ? (
+                                <Select
+                                  value={(e as any).status || "belum_lengkap"}
+                                  onValueChange={(v) => handleStatusChange(e.id, v)}
+                                >
+                                  <SelectTrigger className="h-8 w-[140px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                                      <SelectItem key={key} value={key}>
+                                        <span className="flex items-center gap-1">
+                                          <cfg.icon className="h-3 w-3" />
+                                          {cfg.label}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                (() => {
+                                  const cfg = STATUS_CONFIG[(e as any).status || "belum_lengkap"];
+                                  return <Badge variant={cfg.variant}><cfg.icon className="mr-1 h-3 w-3" />{cfg.label}</Badge>;
+                                })()
+                              )}
+                            </TableCell>
                             <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{e.alamat || "-"}</TableCell>
                             <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
                             <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>

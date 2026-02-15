@@ -27,6 +27,7 @@ export type Database = {
           nama: string | null
           nib_url: string | null
           nomor_hp: string | null
+          status: Database["public"]["Enums"]["entry_status"]
           updated_at: string
         }
         Insert: {
@@ -41,6 +42,7 @@ export type Database = {
           nama?: string | null
           nib_url?: string | null
           nomor_hp?: string | null
+          status?: Database["public"]["Enums"]["entry_status"]
           updated_at?: string
         }
         Update: {
@@ -55,6 +57,7 @@ export type Database = {
           nama?: string | null
           nib_url?: string | null
           nomor_hp?: string | null
+          status?: Database["public"]["Enums"]["entry_status"]
           updated_at?: string
         }
         Relationships: [
@@ -223,6 +226,7 @@ export type Database = {
     }
     Enums: {
       app_role: "super_admin" | "admin" | "lapangan" | "nib"
+      entry_status: "belum_lengkap" | "lengkap" | "terverifikasi"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -351,6 +355,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "admin", "lapangan", "nib"],
+      entry_status: ["belum_lengkap", "lengkap", "terverifikasi"],
     },
   },
 } as const
