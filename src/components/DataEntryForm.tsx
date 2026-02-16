@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Camera, Upload, MapPin, ArrowLeft, X, Image } from "lucide-react";
+import { Camera, Upload, MapPin, ArrowLeft, X, Image as ImageIcon } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
@@ -18,6 +18,38 @@ interface Props {
   onSaved: () => void;
   isPublic?: boolean;
   sharedLinkUserId?: string;
+}
+
+function ImagePreview({ file, existingUrl, onRemoveFile }: { file: File | null; existingUrl?: string | null; onRemoveFile: () => void }) {
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  const src = previewUrl || existingUrl;
+
+  if (!src) return null;
+
+  return (
+    <div className="relative mt-2 inline-block">
+      <img
+        src={src}
+        alt="Preview"
+        className="h-24 w-24 rounded-lg border border-border object-cover"
+        onLoad={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); }}
+      />
+      {file && (
+        <Button
+          type="button"
+          variant="destructive"
+          size="icon"
+          className="absolute -right-2 -top-2 h-5 w-5 rounded-full"
+          onClick={onRemoveFile}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      )}
+      {!file && existingUrl && (
+        <p className="mt-1 text-xs text-muted-foreground text-center">Tersimpan ✓</p>
+      )}
+    </div>
+  );
 }
 
 export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPublic, sharedLinkUserId }: Props) {
@@ -73,7 +105,6 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true })
       );
       const { latitude, longitude } = pos.coords;
-      // Reverse geocode with OpenStreetMap
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
       );
@@ -127,6 +158,11 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     }
   };
 
+  const clearFile = (setter: (f: File | null) => void, ...refs: React.RefObject<HTMLInputElement | null>[]) => {
+    setter(null);
+    refs.forEach((r) => { if (r.current) r.current.value = ""; });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -160,16 +196,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
                 <Camera className="h-4 w-4" />
               </Button>
             </div>
-            {ktpFile && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Image className="h-4 w-4" />
-                <span className="truncate">{ktpFile.name}</span>
-                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setKtpFile(null); if (ktpFileRef.current) ktpFileRef.current.value = ""; if (ktpCameraRef.current) ktpCameraRef.current.value = ""; }}>
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-            {!ktpFile && entry?.ktp_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
+            <ImagePreview file={ktpFile} existingUrl={entry?.ktp_url} onRemoveFile={() => clearFile(setKtpFile, ktpFileRef, ktpCameraRef)} />
           </div>
         )}
 
@@ -200,16 +227,21 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
             <Button type="button" variant="outline" className="w-full" onClick={() => nibFileRef.current?.click()}>
               <Upload className="mr-2 h-4 w-4" /> Pilih File NIB
             </Button>
-            {nibFile && (
+            {nibFile?.type?.startsWith("image/") ? (
+              <ImagePreview file={nibFile} onRemoveFile={() => clearFile(setNibFile, nibFileRef)} />
+            ) : nibFile ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Image className="h-4 w-4" />
+                <ImageIcon className="h-4 w-4" />
                 <span className="truncate">{nibFile.name}</span>
-                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setNibFile(null); if (nibFileRef.current) nibFileRef.current.value = ""; }}>
+                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => clearFile(setNibFile, nibFileRef)}>
                   <X className="h-3 w-3" />
                 </Button>
               </div>
-            )}
-            {!nibFile && entry?.nib_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
+            ) : entry?.nib_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+              <ImagePreview file={null} existingUrl={entry.nib_url} onRemoveFile={() => {}} />
+            ) : entry?.nib_url ? (
+              <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>
+            ) : null}
           </div>
         )}
 
@@ -227,16 +259,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
-              {produkFile && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Image className="h-4 w-4" />
-                  <span className="truncate">{produkFile.name}</span>
-                  <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setProdukFile(null); if (produkFileRef.current) produkFileRef.current.value = ""; if (produkCameraRef.current) produkCameraRef.current.value = ""; }}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-              {!produkFile && entry?.foto_produk_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
+              <ImagePreview file={produkFile} existingUrl={entry?.foto_produk_url} onRemoveFile={() => clearFile(setProdukFile, produkFileRef, produkCameraRef)} />
             </div>
 
             <div className="space-y-2">
@@ -251,16 +274,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
-              {verifikasiFile && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Image className="h-4 w-4" />
-                  <span className="truncate">{verifikasiFile.name}</span>
-                  <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setVerifikasiFile(null); if (verifikasiFileRef.current) verifikasiFileRef.current.value = ""; if (verifikasiCameraRef.current) verifikasiCameraRef.current.value = ""; }}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-              {!verifikasiFile && entry?.foto_verifikasi_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
+              <ImagePreview file={verifikasiFile} existingUrl={entry?.foto_verifikasi_url} onRemoveFile={() => clearFile(setVerifikasiFile, verifikasiFileRef, verifikasiCameraRef)} />
             </div>
           </>
         )}
