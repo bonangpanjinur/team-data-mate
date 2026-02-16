@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Camera, Upload, MapPin, ArrowLeft } from "lucide-react";
+import { Camera, Upload, MapPin, ArrowLeft, X, Image } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
@@ -33,6 +33,15 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const [nibFile, setNibFile] = useState<File | null>(null);
   const [produkFile, setProdukFile] = useState<File | null>(null);
   const [verifikasiFile, setVerifikasiFile] = useState<File | null>(null);
+
+  // Refs for camera inputs
+  const ktpCameraRef = useRef<HTMLInputElement>(null);
+  const ktpFileRef = useRef<HTMLInputElement>(null);
+  const produkCameraRef = useRef<HTMLInputElement>(null);
+  const produkFileRef = useRef<HTMLInputElement>(null);
+  const verifikasiCameraRef = useRef<HTMLInputElement>(null);
+  const verifikasiFileRef = useRef<HTMLInputElement>(null);
+  const nibFileRef = useRef<HTMLInputElement>(null);
 
   const currentRole = isPublic ? "public" : role;
 
@@ -141,14 +150,26 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         {canEdit("ktp") && (
           <div className="space-y-2">
             <Label>Foto KTP</Label>
+            <input ref={ktpFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setKtpFile(e.target.files?.[0] ?? null)} />
+            <input ref={ktpCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setKtpFile(e.target.files?.[0] ?? null)} />
             <div className="flex gap-2">
-              <Input type="file" accept="image/*" onChange={(e) => setKtpFile(e.target.files?.[0] ?? null)} />
-              <Input type="file" accept="image/*" capture="environment" className="hidden" id="ktp-camera" onChange={(e) => setKtpFile(e.target.files?.[0] ?? null)} />
-              <Button type="button" variant="outline" size="icon" onClick={() => document.getElementById("ktp-camera")?.click()}>
+              <Button type="button" variant="outline" className="flex-1" onClick={() => ktpFileRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> Pilih File
+              </Button>
+              <Button type="button" variant="outline" onClick={() => ktpCameraRef.current?.click()}>
                 <Camera className="h-4 w-4" />
               </Button>
             </div>
-            {entry?.ktp_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
+            {ktpFile && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Image className="h-4 w-4" />
+                <span className="truncate">{ktpFile.name}</span>
+                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setKtpFile(null); if (ktpFileRef.current) ktpFileRef.current.value = ""; if (ktpCameraRef.current) ktpCameraRef.current.value = ""; }}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            {!ktpFile && entry?.ktp_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
           </div>
         )}
 
@@ -175,8 +196,20 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         {canEdit("nib") && (
           <div className="space-y-2">
             <Label>NIB (PDF / Foto)</Label>
-            <Input type="file" accept="image/*,.pdf" onChange={(e) => setNibFile(e.target.files?.[0] ?? null)} />
-            {entry?.nib_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
+            <input ref={nibFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setNibFile(e.target.files?.[0] ?? null)} />
+            <Button type="button" variant="outline" className="w-full" onClick={() => nibFileRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" /> Pilih File NIB
+            </Button>
+            {nibFile && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Image className="h-4 w-4" />
+                <span className="truncate">{nibFile.name}</span>
+                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setNibFile(null); if (nibFileRef.current) nibFileRef.current.value = ""; }}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            {!nibFile && entry?.nib_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
           </div>
         )}
 
@@ -184,26 +217,50 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           <>
             <div className="space-y-2">
               <Label>Foto Produk</Label>
+              <input ref={produkFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
+              <input ref={produkCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
               <div className="flex gap-2">
-                <Input type="file" accept="image/*" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
-                <Input type="file" accept="image/*" capture="environment" className="hidden" id="produk-camera" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
-                <Button type="button" variant="outline" size="icon" onClick={() => document.getElementById("produk-camera")?.click()}>
+                <Button type="button" variant="outline" className="flex-1" onClick={() => produkFileRef.current?.click()}>
+                  <Upload className="mr-2 h-4 w-4" /> Pilih File
+                </Button>
+                <Button type="button" variant="outline" onClick={() => produkCameraRef.current?.click()}>
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
-              {entry?.foto_produk_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
+              {produkFile && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Image className="h-4 w-4" />
+                  <span className="truncate">{produkFile.name}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setProdukFile(null); if (produkFileRef.current) produkFileRef.current.value = ""; if (produkCameraRef.current) produkCameraRef.current.value = ""; }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+              {!produkFile && entry?.foto_produk_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
             </div>
 
             <div className="space-y-2">
               <Label>Foto Verifikasi Lapangan</Label>
+              <input ref={verifikasiFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
+              <input ref={verifikasiCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
               <div className="flex gap-2">
-                <Input type="file" accept="image/*" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
-                <Input type="file" accept="image/*" capture="environment" className="hidden" id="verifikasi-camera" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
-                <Button type="button" variant="outline" size="icon" onClick={() => document.getElementById("verifikasi-camera")?.click()}>
+                <Button type="button" variant="outline" className="flex-1" onClick={() => verifikasiFileRef.current?.click()}>
+                  <Upload className="mr-2 h-4 w-4" /> Pilih File
+                </Button>
+                <Button type="button" variant="outline" onClick={() => verifikasiCameraRef.current?.click()}>
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
-              {entry?.foto_verifikasi_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
+              {verifikasiFile && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Image className="h-4 w-4" />
+                  <span className="truncate">{verifikasiFile.name}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => { setVerifikasiFile(null); if (verifikasiFileRef.current) verifikasiFileRef.current.value = ""; if (verifikasiCameraRef.current) verifikasiCameraRef.current.value = ""; }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+              {!verifikasiFile && entry?.foto_verifikasi_url && <p className="text-xs text-muted-foreground">File sudah diupload ✓</p>}
             </div>
           </>
         )}

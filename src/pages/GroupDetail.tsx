@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
@@ -45,11 +45,23 @@ export default function GroupDetail() {
   const [availableUsers, setAvailableUsers] = useState<{ id: string; email: string | null; full_name: string | null }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
 
+  // Filter & search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
   // Download state
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
 
   const canDownload = role === "super_admin" || role === "admin";
+
+  const filteredEntries = entries.filter((e) => {
+    const matchesSearch = searchQuery === "" ||
+      (e.nama?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (e.alamat?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesStatus = statusFilter === "all" || e.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const fetchGroup = async () => {
     if (!groupId) return;
@@ -222,28 +234,60 @@ export default function GroupDetail() {
             />
           ) : (
             <>
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <Button onClick={() => setShowEntryForm(true)}>
-                  <Plus className="mr-2 h-4 w-4" /> Tambah Data
-                </Button>
-                {canDownload && selectedEntries.size > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDownload([...selectedEntries])}
-                    disabled={downloading}
-                  >
-                    {downloading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    Download {selectedEntries.size} data
+              <div className="mb-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button onClick={() => setShowEntryForm(true)}>
+                    <Plus className="mr-2 h-4 w-4" /> Tambah Data
                   </Button>
-                )}
+                  {canDownload && selectedEntries.size > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleDownload([...selectedEntries])}
+                      disabled={downloading}
+                    >
+                      {downloading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-2 h-4 w-4" />
+                      )}
+                      Download {selectedEntries.size} data
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cari nama atau alamat..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <Filter className="mr-2 h-4 w-4" />
+                      <SelectValue placeholder="Filter status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Status</SelectItem>
+                      {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                        <SelectItem key={key} value={key}>
+                          <span className="flex items-center gap-1">
+                            <cfg.icon className="h-3 w-3" />
+                            {cfg.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {entries.length === 0 ? (
+              {filteredEntries.length === 0 ? (
                 <Card>
-                  <CardContent className="py-8 text-center text-muted-foreground">Belum ada data</CardContent>
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    {entries.length === 0 ? "Belum ada data" : "Tidak ada data yang cocok dengan filter"}
+                  </CardContent>
                 </Card>
               ) : (
                 <Card>
@@ -272,7 +316,7 @@ export default function GroupDetail() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {entries.map((e) => (
+                        {filteredEntries.map((e) => (
                           <TableRow key={e.id}>
                             {canDownload && (
                               <TableCell onClick={(ev) => ev.stopPropagation()}>
