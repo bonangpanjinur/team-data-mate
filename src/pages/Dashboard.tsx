@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FolderOpen, FileText, Link2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Users, FolderOpen, FileText, Link2, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,7 +9,10 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell,
+  ResponsiveContainer, LabelList, CartesianGrid,
+} from "recharts";
 
 const STATUS_LABELS: Record<string, string> = {
   belum_lengkap: "Belum Lengkap",
@@ -23,7 +26,25 @@ const STATUS_COLORS: Record<string, string> = {
   terverifikasi: "hsl(142 71% 45%)",
 };
 
+const STATUS_BG: Record<string, string> = {
+  belum_lengkap: "bg-red-100 dark:bg-red-950",
+  lengkap: "bg-yellow-100 dark:bg-yellow-950",
+  terverifikasi: "bg-green-100 dark:bg-green-950",
+};
+
+const STATUS_TEXT: Record<string, string> = {
+  belum_lengkap: "text-red-700 dark:text-red-400",
+  lengkap: "text-yellow-700 dark:text-yellow-400",
+  terverifikasi: "text-green-700 dark:text-green-400",
+};
+
 const pieChartConfig: ChartConfig = {
+  belum_lengkap: { label: "Belum Lengkap", color: STATUS_COLORS.belum_lengkap },
+  lengkap: { label: "Lengkap", color: STATUS_COLORS.lengkap },
+  terverifikasi: { label: "Terverifikasi", color: STATUS_COLORS.terverifikasi },
+};
+
+const statusBarConfig: ChartConfig = {
   belum_lengkap: { label: "Belum Lengkap", color: STATUS_COLORS.belum_lengkap },
   lengkap: { label: "Lengkap", color: STATUS_COLORS.lengkap },
   terverifikasi: { label: "Terverifikasi", color: STATUS_COLORS.terverifikasi },
@@ -114,6 +135,14 @@ export default function Dashboard() {
 
   const totalEntries = statusData.reduce((s, d) => s + d.count, 0);
 
+  // Status bar chart data format
+  const statusBarData = statusData.map((s) => ({
+    label: s.label,
+    count: s.count,
+    status: s.status,
+    persen: totalEntries > 0 ? Math.round((s.count / totalEntries) * 100) : 0,
+  }));
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">Dashboard</h1>
@@ -133,18 +162,97 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Status Pie Chart */}
+      {/* Status Stats Cards */}
+      {totalEntries > 0 && (
+        <div className="grid gap-4 sm:grid-cols-3 mb-8">
+          {statusData.map((s) => (
+            <Card key={s.status} className={`border-0 ${STATUS_BG[s.status]}`}>
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className={`text-xs font-medium mb-1 ${STATUS_TEXT[s.status]}`}>{s.label}</p>
+                    <p className={`text-3xl font-bold ${STATUS_TEXT[s.status]}`}>{s.count}</p>
+                    <p className={`text-xs mt-1 ${STATUS_TEXT[s.status]} opacity-70`}>
+                      {totalEntries > 0 ? Math.round((s.count / totalEntries) * 100) : 0}% dari total
+                    </p>
+                  </div>
+                  <div
+                    className="h-10 w-10 rounded-full flex items-center justify-center opacity-30"
+                    style={{ backgroundColor: s.fill }}
+                  />
+                </div>
+                {/* Mini progress bar */}
+                <div className="mt-3 h-1.5 w-full rounded-full bg-black/10 dark:bg-white/10">
+                  <div
+                    className="h-1.5 rounded-full transition-all duration-700"
+                    style={{
+                      width: `${totalEntries > 0 ? (s.count / totalEntries) * 100 : 0}%`,
+                      backgroundColor: s.fill,
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Charts Row 1: Status Bar + Pie */}
+      <div className="grid gap-6 lg:grid-cols-2 mb-6">
+        {/* Status Bar Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Distribusi Status Entri</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Jumlah Entri per Status
+            </CardTitle>
+            <CardDescription>Total {totalEntries} entri terdaftar</CardDescription>
           </CardHeader>
           <CardContent>
             {totalEntries === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">Belum ada data</p>
             ) : (
-              <ChartContainer config={pieChartConfig} className="mx-auto aspect-square max-h-[280px]">
+              <ChartContainer config={statusBarConfig} className="max-h-[260px]">
+                <BarChart data={statusBarData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid vertical={false} className="stroke-muted" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                  <ChartTooltip
+                    content={<ChartTooltipContent />}
+                    formatter={(value, name) => [`${value} entri`, ""]}
+                  />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                    {statusBarData.map((entry) => (
+                      <Cell key={entry.status} fill={STATUS_COLORS[entry.status]} />
+                    ))}
+                    <LabelList
+                      dataKey="count"
+                      position="top"
+                      style={{ fontSize: 13, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Status Pie Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Distribusi Status Entri</CardTitle>
+            <CardDescription>Proporsi setiap status dalam persentase</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {totalEntries === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Belum ada data</p>
+            ) : (
+              <ChartContainer config={pieChartConfig} className="mx-auto aspect-square max-h-[250px]">
                 <PieChart>
                   <ChartTooltip content={<ChartTooltipContent nameKey="label" />} />
                   <Pie
@@ -153,8 +261,8 @@ export default function Dashboard() {
                     nameKey="label"
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={100}
+                    innerRadius={55}
+                    outerRadius={95}
                     strokeWidth={2}
                   >
                     {statusData.map((entry) => (
@@ -170,35 +278,41 @@ export default function Dashboard() {
                   <div key={s.status} className="flex items-center gap-1.5 text-sm">
                     <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: s.fill }} />
                     <span className="text-muted-foreground">{s.label}</span>
-                    <span className="font-medium">{s.count}</span>
+                    <span className="font-semibold">{Math.round((s.count / totalEntries) * 100)}%</span>
                   </div>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
 
-        {/* Group Bar Chart */}
+      {/* Group Bar Chart (full width) */}
+      {groupData.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Jumlah Entri per Group</CardTitle>
+            <CardDescription>Top {groupData.length} group berdasarkan jumlah data</CardDescription>
           </CardHeader>
           <CardContent>
-            {groupData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">Belum ada data</p>
-            ) : (
-              <ChartContainer config={barChartConfig} className="max-h-[320px]">
-                <BarChart data={groupData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                  <XAxis type="number" allowDecimals={false} />
-                  <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 12 }} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ChartContainer>
-            )}
+            <ChartContainer config={barChartConfig} className="max-h-[320px]">
+              <BarChart data={groupData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                <CartesianGrid horizontal={false} className="stroke-muted" />
+                <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]}>
+                  <LabelList
+                    dataKey="count"
+                    position="right"
+                    style={{ fontSize: 12, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                  />
+                </Bar>
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   );
 }
