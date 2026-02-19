@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          entry_id: string
+          entry_name: string | null
+          group_id: string
+          id: string
+          new_status: string
+          old_status: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          entry_id: string
+          entry_name?: string | null
+          group_id: string
+          id?: string
+          new_status: string
+          old_status?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          entry_id?: string
+          entry_name?: string | null
+          group_id?: string
+          id?: string
+          new_status?: string
+          old_status?: string | null
+        }
+        Relationships: []
+      }
       data_entries: {
         Row: {
           alamat: string | null

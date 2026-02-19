@@ -12,12 +12,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
+
+interface AuditLog {
+  id: string;
+  entry_id: string;
+  entry_name: string | null;
+  group_id: string;
+  old_status: string | null;
+  new_status: string;
+  changed_by: string | null;
+  changed_at: string;
+  changer_name?: string | null;
+}
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
@@ -44,6 +57,10 @@ export default function GroupDetail() {
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<{ id: string; email: string | null; full_name: string | null }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
+
+  // Audit log state
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   // Filter & search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,6 +115,37 @@ export default function GroupDetail() {
     );
   };
 
+  const fetchAuditLogs = async () => {
+    if (!groupId) return;
+    setAuditLoading(true);
+    const { data: logs } = await supabase
+      .from("audit_logs" as any)
+      .select("*")
+      .eq("group_id", groupId)
+      .order("changed_at", { ascending: false })
+      .limit(200);
+
+    const typedLogs = (logs as unknown as AuditLog[]) ?? [];
+
+    if (typedLogs.length > 0) {
+      const changerIds = [...new Set(typedLogs.map((l) => l.changed_by).filter(Boolean))] as string[];
+      const { data: profiles } = changerIds.length
+        ? await supabase.from("profiles").select("id, full_name, email").in("id", changerIds)
+        : { data: [] };
+      const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name || p.email || "Unknown"]));
+
+      setAuditLogs(
+        typedLogs.map((l) => ({
+          ...l,
+          changer_name: l.changed_by ? (profileMap.get(l.changed_by) ?? "Unknown") : "Sistem",
+        }))
+      );
+    } else {
+      setAuditLogs([]);
+    }
+    setAuditLoading(false);
+  };
+
   const fetchAvailableUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
     const { data: existing } = await supabase.from("group_members").select("user_id").eq("group_id", groupId ?? "");
@@ -109,7 +157,10 @@ export default function GroupDetail() {
     fetchGroup();
     fetchEntries();
     fetchMembers();
-  }, [groupId]);
+    if (role === "super_admin" || role === "admin") {
+      fetchAuditLogs();
+    }
+  }, [groupId, role]);
 
   const handleAddMember = async () => {
     if (!selectedUserId || !groupId) return;
@@ -319,6 +370,11 @@ export default function GroupDetail() {
           <TabsTrigger value="entries" className="gap-2"><FileText className="h-4 w-4" /> Data Entri</TabsTrigger>
           {(role === "super_admin" || role === "admin") && (
             <TabsTrigger value="members" className="gap-2"><Users className="h-4 w-4" /> Anggota</TabsTrigger>
+          )}
+          {(role === "super_admin" || role === "admin") && (
+            <TabsTrigger value="audit" className="gap-2" onClick={fetchAuditLogs}>
+              <History className="h-4 w-4" /> Audit Log
+            </TabsTrigger>
           )}
         </TabsList>
 
@@ -577,6 +633,89 @@ export default function GroupDetail() {
                     )}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {(role === "super_admin" || role === "admin") && (
+          <TabsContent value="audit" className="mt-4">
+            <Card>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Riwayat Perubahan Status
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={fetchAuditLogs} disabled={auditLoading}>
+                  {auditLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  <span className="ml-1">Refresh</span>
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                {auditLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : auditLogs.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    Belum ada perubahan status yang tercatat
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[500px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nama Peserta</TableHead>
+                          <TableHead>Perubahan Status</TableHead>
+                          <TableHead>Diubah Oleh</TableHead>
+                          <TableHead>Waktu</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {auditLogs.map((log) => {
+                          const oldCfg = log.old_status ? STATUS_CONFIG[log.old_status] : null;
+                          const newCfg = STATUS_CONFIG[log.new_status];
+                          return (
+                            <TableRow key={log.id}>
+                              <TableCell className="font-medium">{log.entry_name || "-"}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {oldCfg ? (
+                                    <Badge variant={oldCfg.variant} className="text-xs">
+                                      <oldCfg.icon className="mr-1 h-3 w-3" />
+                                      {oldCfg.label}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs">—</Badge>
+                                  )}
+                                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  {newCfg ? (
+                                    <Badge variant={newCfg.variant} className="text-xs">
+                                      <newCfg.icon className="mr-1 h-3 w-3" />
+                                      {newCfg.label}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs">{log.new_status}</Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{log.changer_name ?? "—"}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                {new Date(log.changed_at).toLocaleString("id-ID", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
