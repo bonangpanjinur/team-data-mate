@@ -71,6 +71,81 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_rates: {
+        Row: {
+          amount_per_entry: number
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          amount_per_entry?: number
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          amount_per_entry?: number
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      commissions: {
+        Row: {
+          amount: number
+          created_at: string
+          entry_id: string | null
+          group_id: string | null
+          id: string
+          paid_at: string | null
+          period: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          entry_id?: string | null
+          group_id?: string | null
+          id?: string
+          paid_at?: string | null
+          period?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          entry_id?: string | null
+          group_id?: string | null
+          id?: string
+          paid_at?: string | null
+          period?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "data_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_entries: {
         Row: {
           alamat: string | null
@@ -84,7 +159,9 @@ export type Database = {
           nama: string | null
           nib_url: string | null
           nomor_hp: string | null
+          pic_user_id: string | null
           sertifikat_url: string | null
+          source_link_id: string | null
           status: Database["public"]["Enums"]["entry_status"]
           tracking_code: string | null
           updated_at: string
@@ -101,7 +178,9 @@ export type Database = {
           nama?: string | null
           nib_url?: string | null
           nomor_hp?: string | null
+          pic_user_id?: string | null
           sertifikat_url?: string | null
+          source_link_id?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
           tracking_code?: string | null
           updated_at?: string
@@ -118,7 +197,9 @@ export type Database = {
           nama?: string | null
           nib_url?: string | null
           nomor_hp?: string | null
+          pic_user_id?: string | null
           sertifikat_url?: string | null
+          source_link_id?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
           tracking_code?: string | null
           updated_at?: string
@@ -131,7 +212,47 @@ export type Database = {
             referencedRelation: "groups"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "data_entries_source_link_id_fkey"
+            columns: ["source_link_id"]
+            isOneToOne: false
+            referencedRelation: "shared_links"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      disbursements: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       field_access: {
         Row: {
@@ -246,6 +367,7 @@ export type Database = {
           group_id: string
           id: string
           is_active: boolean
+          slug: string | null
           token: string
           user_id: string
         }
@@ -254,6 +376,7 @@ export type Database = {
           group_id: string
           id?: string
           is_active?: boolean
+          slug?: string | null
           token?: string
           user_id: string
         }
@@ -262,6 +385,7 @@ export type Database = {
           group_id?: string
           id?: string
           is_active?: boolean
+          slug?: string | null
           token?: string
           user_id?: string
         }
