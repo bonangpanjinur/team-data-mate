@@ -16,7 +16,7 @@ interface Props {
   groupId: string;
   entry?: DataEntry | null;
   onCancel: () => void;
-  onSaved: () => void;
+  onSaved: (trackingCode?: string) => void;
   isPublic?: boolean;
   sharedLinkUserId?: string;
 }
@@ -71,6 +71,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const [nibFile, setNibFile] = useState<File | null>(null);
   const [produkFile, setProdukFile] = useState<File | null>(null);
   const [verifikasiFile, setVerifikasiFile] = useState<File | null>(null);
+  const [sertifikatFile, setSertifikatFile] = useState<File | null>(null);
 
   // Refs for camera inputs
   const ktpCameraRef = useRef<HTMLInputElement>(null);
@@ -80,6 +81,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const verifikasiCameraRef = useRef<HTMLInputElement>(null);
   const verifikasiFileRef = useRef<HTMLInputElement>(null);
   const nibFileRef = useRef<HTMLInputElement>(null);
+  const sertifikatFileRef = useRef<HTMLInputElement>(null);
 
   const currentRole = isPublic ? "public" : role;
 
@@ -129,11 +131,13 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     let nib_url = entry?.nib_url ?? null;
     let foto_produk_url = entry?.foto_produk_url ?? null;
     let foto_verifikasi_url = entry?.foto_verifikasi_url ?? null;
+    let sertifikat_url = (entry as any)?.sertifikat_url ?? null;
 
     if (ktpFile) ktp_url = await uploadFile(ktpFile, "ktp-photos");
     if (nibFile) nib_url = await uploadFile(nibFile, "nib-documents");
     if (produkFile) foto_produk_url = await uploadFile(produkFile, "product-photos");
     if (verifikasiFile) foto_verifikasi_url = await uploadFile(verifikasiFile, "verification-photos");
+    if (sertifikatFile) sertifikat_url = await uploadFile(sertifikatFile, "sertifikat-halal");
 
     const payload: Record<string, unknown> = {};
     if (canEdit("nama")) payload.nama = nama;
@@ -143,16 +147,20 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     if (canEdit("nib") && nib_url) payload.nib_url = nib_url;
     if ((currentRole === "super_admin" || currentRole === "admin") && foto_produk_url) payload.foto_produk_url = foto_produk_url;
     if ((currentRole === "super_admin" || currentRole === "admin") && foto_verifikasi_url) payload.foto_verifikasi_url = foto_verifikasi_url;
+    if ((currentRole === "super_admin" || currentRole === "admin") && sertifikat_url) payload.sertifikat_url = sertifikat_url;
 
     let error;
+    let resultData: any = null;
     if (entry) {
       ({ error } = await supabase.from("data_entries").update(payload).eq("id", entry.id));
     } else {
-      ({ error } = await supabase.from("data_entries").insert({
+      const res = await supabase.from("data_entries").insert({
         ...payload,
         group_id: groupId,
         created_by: isPublic ? sharedLinkUserId : user?.id,
-      } as any));
+      } as any).select("tracking_code" as any).single();
+      error = res.error;
+      resultData = res.data;
     }
 
     setSaving(false);
@@ -160,7 +168,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
       toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
     } else {
       toast({ title: entry ? "Data diperbarui" : "Data disimpan" });
-      onSaved();
+      onSaved(resultData?.tracking_code);
     }
   };
 
@@ -281,6 +289,27 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
                 </Button>
               </div>
               <ImagePreview file={verifikasiFile} existingUrl={entry?.foto_verifikasi_url} onRemoveFile={() => clearFile(setVerifikasiFile, verifikasiFileRef, verifikasiCameraRef)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Sertifikat Halal (PDF / Foto)</Label>
+              <input ref={sertifikatFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setSertifikatFile(e.target.files?.[0] ?? null)} />
+              <Button type="button" variant="outline" className="w-full" onClick={() => sertifikatFileRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> Pilih File Sertifikat
+              </Button>
+              {sertifikatFile?.type?.startsWith("image/") ? (
+                <ImagePreview file={sertifikatFile} onRemoveFile={() => clearFile(setSertifikatFile, sertifikatFileRef)} />
+              ) : sertifikatFile ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ImageIcon className="h-4 w-4" />
+                  <span className="truncate">{sertifikatFile.name}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => clearFile(setSertifikatFile, sertifikatFileRef)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (entry as any)?.sertifikat_url ? (
+                <p className="text-xs text-muted-foreground">Sertifikat sudah diupload ✓</p>
+              ) : null}
             </div>
           </>
         )}

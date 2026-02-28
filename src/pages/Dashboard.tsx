@@ -18,36 +18,54 @@ const STATUS_LABELS: Record<string, string> = {
   belum_lengkap: "Belum Lengkap",
   lengkap: "Lengkap",
   terverifikasi: "Terverifikasi",
+  nib_selesai: "NIB Selesai",
+  pengajuan: "Pengajuan",
+  sertifikat_selesai: "Sertifikat Selesai",
 };
 
 const STATUS_COLORS: Record<string, string> = {
   belum_lengkap: "hsl(0 84% 60%)",
   lengkap: "hsl(45 93% 47%)",
   terverifikasi: "hsl(142 71% 45%)",
+  nib_selesai: "hsl(200 80% 50%)",
+  pengajuan: "hsl(270 60% 55%)",
+  sertifikat_selesai: "hsl(160 84% 39%)",
 };
 
 const STATUS_BG: Record<string, string> = {
   belum_lengkap: "bg-red-100 dark:bg-red-950",
   lengkap: "bg-yellow-100 dark:bg-yellow-950",
   terverifikasi: "bg-green-100 dark:bg-green-950",
+  nib_selesai: "bg-blue-100 dark:bg-blue-950",
+  pengajuan: "bg-purple-100 dark:bg-purple-950",
+  sertifikat_selesai: "bg-emerald-100 dark:bg-emerald-950",
 };
 
 const STATUS_TEXT: Record<string, string> = {
   belum_lengkap: "text-red-700 dark:text-red-400",
   lengkap: "text-yellow-700 dark:text-yellow-400",
   terverifikasi: "text-green-700 dark:text-green-400",
+  nib_selesai: "text-blue-700 dark:text-blue-400",
+  pengajuan: "text-purple-700 dark:text-purple-400",
+  sertifikat_selesai: "text-emerald-700 dark:text-emerald-400",
 };
 
 const pieChartConfig: ChartConfig = {
   belum_lengkap: { label: "Belum Lengkap", color: STATUS_COLORS.belum_lengkap },
   lengkap: { label: "Lengkap", color: STATUS_COLORS.lengkap },
   terverifikasi: { label: "Terverifikasi", color: STATUS_COLORS.terverifikasi },
+  nib_selesai: { label: "NIB Selesai", color: STATUS_COLORS.nib_selesai },
+  pengajuan: { label: "Pengajuan", color: STATUS_COLORS.pengajuan },
+  sertifikat_selesai: { label: "Sertifikat Selesai", color: STATUS_COLORS.sertifikat_selesai },
 };
 
 const statusBarConfig: ChartConfig = {
   belum_lengkap: { label: "Belum Lengkap", color: STATUS_COLORS.belum_lengkap },
   lengkap: { label: "Lengkap", color: STATUS_COLORS.lengkap },
   terverifikasi: { label: "Terverifikasi", color: STATUS_COLORS.terverifikasi },
+  nib_selesai: { label: "NIB Selesai", color: STATUS_COLORS.nib_selesai },
+  pengajuan: { label: "Pengajuan", color: STATUS_COLORS.pengajuan },
+  sertifikat_selesai: { label: "Sertifikat Selesai", color: STATUS_COLORS.sertifikat_selesai },
 };
 
 const barChartConfig: ChartConfig = {
@@ -95,7 +113,7 @@ export default function Dashboard() {
       // Status distribution
       const { data: entries } = await supabase.from("data_entries").select("status");
       if (entries) {
-        const counts: Record<string, number> = { belum_lengkap: 0, lengkap: 0, terverifikasi: 0 };
+        const counts: Record<string, number> = {};
         entries.forEach((e) => { counts[e.status] = (counts[e.status] || 0) + 1; });
         setStatusData(
           Object.entries(counts).map(([status, count]) => ({

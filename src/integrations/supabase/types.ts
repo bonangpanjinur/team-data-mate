@@ -84,7 +84,9 @@ export type Database = {
           nama: string | null
           nib_url: string | null
           nomor_hp: string | null
+          sertifikat_url: string | null
           status: Database["public"]["Enums"]["entry_status"]
+          tracking_code: string | null
           updated_at: string
         }
         Insert: {
@@ -99,7 +101,9 @@ export type Database = {
           nama?: string | null
           nib_url?: string | null
           nomor_hp?: string | null
+          sertifikat_url?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
+          tracking_code?: string | null
           updated_at?: string
         }
         Update: {
@@ -114,7 +118,9 @@ export type Database = {
           nama?: string | null
           nib_url?: string | null
           nomor_hp?: string | null
+          sertifikat_url?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
+          tracking_code?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -262,7 +268,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      tracking_view: {
+        Row: {
+          created_at: string | null
+          nama: string | null
+          sertifikat_url: string | null
+          status: string | null
+          tracking_code: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          nama?: string | null
+          sertifikat_url?: string | null
+          status?: never
+          tracking_code?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          nama?: string | null
+          sertifikat_url?: string | null
+          status?: never
+          tracking_code?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
@@ -283,7 +312,13 @@ export type Database = {
     }
     Enums: {
       app_role: "super_admin" | "admin" | "lapangan" | "nib"
-      entry_status: "belum_lengkap" | "lengkap" | "terverifikasi"
+      entry_status:
+        | "belum_lengkap"
+        | "lengkap"
+        | "terverifikasi"
+        | "nib_selesai"
+        | "pengajuan"
+        | "sertifikat_selesai"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -412,7 +447,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "admin", "lapangan", "nib"],
-      entry_status: ["belum_lengkap", "lengkap", "terverifikasi"],
+      entry_status: [
+        "belum_lengkap",
+        "lengkap",
+        "terverifikasi",
+        "nib_selesai",
+        "pengajuan",
+        "sertifikat_selesai",
+      ],
     },
   },
 } as const

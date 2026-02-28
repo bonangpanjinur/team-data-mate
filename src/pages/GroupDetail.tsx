@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
@@ -36,6 +36,9 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
   lengkap: { label: "Lengkap", variant: "secondary", icon: CheckCircle2 },
   terverifikasi: { label: "Terverifikasi", variant: "default", icon: ShieldCheck },
+  nib_selesai: { label: "NIB Selesai", variant: "secondary", icon: FileCheck },
+  pengajuan: { label: "Pengajuan", variant: "outline", icon: Send },
+  sertifikat_selesai: { label: "Sertifikat Selesai", variant: "default", icon: Award },
 };
 
 interface MemberWithProfile {
@@ -194,7 +197,7 @@ export default function GroupDetail() {
     }
   };
 
-  const handleEntrySaved = () => {
+  const handleEntrySaved = (_trackingCode?: string) => {
     setShowEntryForm(false);
     setEditingEntry(null);
     fetchEntries();
@@ -487,9 +490,10 @@ export default function GroupDetail() {
                           <TableHead>No HP</TableHead>
                           <TableHead>KTP</TableHead>
                           <TableHead>NIB</TableHead>
+                          <TableHead>Sertifikat</TableHead>
+                          <TableHead>Tracking</TableHead>
                           <TableHead>Produk</TableHead>
                           <TableHead>Verifikasi</TableHead>
-                          <TableHead className="w-20"></TableHead>
                           <TableHead className="w-20"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -536,6 +540,10 @@ export default function GroupDetail() {
                             <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
                             <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.nib_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
+                            <TableCell>{(e as any).sertifikat_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
+                            <TableCell>
+                              <code className="text-xs font-mono text-muted-foreground">{(e as any).tracking_code || "-"}</code>
+                            </TableCell>
                             <TableCell>{e.foto_produk_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.foto_verifikasi_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>

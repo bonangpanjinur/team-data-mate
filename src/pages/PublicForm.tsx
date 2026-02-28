@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Shield, Copy, ExternalLink } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import DataEntryForm from "@/components/DataEntryForm";
 
 export default function PublicForm() {
@@ -10,6 +12,7 @@ export default function PublicForm() {
   const [linkData, setLinkData] = useState<{ group_id: string; user_id: string } | null>(null);
   const [invalid, setInvalid] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [trackingCode, setTrackingCode] = useState<string | null>(null);
 
   useEffect(() => {
     const validate = async () => {
@@ -42,13 +45,36 @@ export default function PublicForm() {
   }
 
   if (submitted) {
+    const copyCode = () => {
+      if (trackingCode) {
+        navigator.clipboard.writeText(trackingCode);
+        toast({ title: "Kode tracking disalin!" });
+      }
+    };
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
         <Card className="w-full max-w-md text-center">
-          <CardContent className="py-12">
+          <CardContent className="py-12 space-y-4">
             <Shield className="mx-auto mb-4 h-12 w-12 text-primary" />
             <p className="text-lg font-medium">Terima kasih!</p>
             <p className="text-muted-foreground">Data Anda telah berhasil dikirim.</p>
+            {trackingCode && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm text-muted-foreground">Simpan kode ini untuk melacak proses sertifikat Anda:</p>
+                <div className="flex items-center justify-center gap-2">
+                  <code className="rounded-md bg-muted px-4 py-2 text-lg font-bold font-mono tracking-widest">{trackingCode}</code>
+                  <Button variant="outline" size="icon" onClick={copyCode}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Link to={`/tracking/${trackingCode}`}>
+                  <Button variant="link" className="gap-2">
+                    <ExternalLink className="h-4 w-4" />
+                    Cek Status Tracking
+                  </Button>
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -76,7 +102,10 @@ export default function PublicForm() {
           isPublic
           sharedLinkUserId={linkData.user_id}
           onCancel={() => {}}
-          onSaved={() => setSubmitted(true)}
+          onSaved={(newTrackingCode?: string) => {
+            setTrackingCode(newTrackingCode ?? null);
+            setSubmitted(true);
+          }}
         />
       </div>
     </div>
