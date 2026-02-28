@@ -51,7 +51,7 @@ const AppRoutes = () => (
     <Route path="/users" element={<ProtectedRoute allowedRoles={["super_admin"]}><UsersManagement /></ProtectedRoute>} />
     <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
     <Route path="/groups/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
-    <Route path="/share" element={<ProtectedRoute allowedRoles={["lapangan"]}><ShareLinks /></ProtectedRoute>} />
+    <Route path="/share" element={<ProtectedRoute><ShareLinks /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin"]}><AppSettings /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />

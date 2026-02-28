@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, Palette, Type, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck } from "lucide-react";
+import { useAllFieldAccess } from "@/hooks/useFieldAccess";
 
 const COLOR_PRESETS = [
   { label: "Biru Profesional", value: "217 91% 50%" },
@@ -17,6 +20,24 @@ const COLOR_PRESETS = [
   { label: "Merah Tegas", value: "0 84% 50%" },
 ];
 
+const ROLES = [
+  { key: "super_admin", label: "Super Admin" },
+  { key: "admin", label: "Admin" },
+  { key: "lapangan", label: "Lapangan" },
+  { key: "nib", label: "NIB" },
+];
+
+const FIELDS = [
+  { key: "nama", label: "Nama" },
+  { key: "alamat", label: "Alamat" },
+  { key: "nomor_hp", label: "Nomor HP" },
+  { key: "ktp", label: "Foto KTP" },
+  { key: "nib", label: "NIB" },
+  { key: "foto_produk", label: "Foto Produk" },
+  { key: "foto_verifikasi", label: "Foto Verifikasi" },
+  { key: "sertifikat", label: "Sertifikat Halal" },
+];
+
 export default function AppSettings() {
   const { role } = useAuth();
   const [appName, setAppName] = useState("HalalTrack");
@@ -24,6 +45,25 @@ export default function AppSettings() {
   const [logoUrl, setLogoUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [savingAccess, setSavingAccess] = useState(false);
+
+  const { allAccess, loading: accessLoading, refetch: refetchAccess } = useAllFieldAccess();
+
+  // Local editable copy of field access
+  const [localAccess, setLocalAccess] = useState<Record<string, Record<string, { can_view: boolean; can_edit: boolean }>>>({});
+
+  useEffect(() => {
+    if (Object.keys(allAccess).length > 0) {
+      const mapped: Record<string, Record<string, { can_view: boolean; can_edit: boolean }>> = {};
+      for (const [r, fields] of Object.entries(allAccess)) {
+        mapped[r] = {};
+        fields.forEach((f) => {
+          mapped[r][f.field_name] = { can_view: f.can_view, can_edit: f.can_edit };
+        });
+      }
+      setLocalAccess(mapped);
+    }
+  }, [allAccess]);
 
   useEffect(() => {
     const load = async () => {
@@ -39,12 +79,9 @@ export default function AppSettings() {
     load();
   }, []);
 
-  // Apply primary color preview live
   useEffect(() => {
     document.documentElement.style.setProperty("--primary", primaryColor);
-    return () => {
-      document.documentElement.style.removeProperty("--primary");
-    };
+    return () => { document.documentElement.style.removeProperty("--primary"); };
   }, [primaryColor]);
 
   const handleSave = async () => {
@@ -58,8 +95,7 @@ export default function AppSettings() {
     for (const u of updates) {
       await supabase
         .from("app_settings")
-        .update({ value: u.value, updated_at: new Date().toISOString() })
-        .eq("key", u.key);
+        .upsert({ key: u.key, value: u.value, updated_at: new Date().toISOString() }, { onConflict: "key" });
     }
 
     setSaving(false);
@@ -70,24 +106,58 @@ export default function AppSettings() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-
     const ext = file.name.split(".").pop();
     const path = `logo/app-logo.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("product-photos")
-      .upload(path, file, { upsert: true });
-
+    const { error: uploadError } = await supabase.storage.from("product-photos").upload(path, file, { upsert: true });
     if (uploadError) {
       toast({ title: "Gagal upload logo", description: uploadError.message, variant: "destructive" });
       setUploading(false);
       return;
     }
-
     const { data: urlData } = supabase.storage.from("product-photos").getPublicUrl(path);
     setLogoUrl(urlData.publicUrl);
     setUploading(false);
     toast({ title: "Logo berhasil diupload" });
+  };
+
+  const toggleAccess = (roleKey: string, fieldKey: string, type: "can_view" | "can_edit") => {
+    setLocalAccess((prev) => {
+      const updated = { ...prev };
+      if (!updated[roleKey]) updated[roleKey] = {};
+      if (!updated[roleKey][fieldKey]) updated[roleKey][fieldKey] = { can_view: false, can_edit: false };
+      updated[roleKey][fieldKey] = { ...updated[roleKey][fieldKey], [type]: !updated[roleKey][fieldKey][type] };
+      // If can_edit is enabled, can_view must be true
+      if (type === "can_edit" && updated[roleKey][fieldKey].can_edit) {
+        updated[roleKey][fieldKey].can_view = true;
+      }
+      // If can_view disabled, disable can_edit too
+      if (type === "can_view" && !updated[roleKey][fieldKey].can_view) {
+        updated[roleKey][fieldKey].can_edit = false;
+      }
+      return updated;
+    });
+  };
+
+  const handleSaveAccess = async () => {
+    setSavingAccess(true);
+    const updates: { role: string; field_name: string; can_view: boolean; can_edit: boolean }[] = [];
+    for (const [r, fields] of Object.entries(localAccess)) {
+      for (const [f, perms] of Object.entries(fields)) {
+        updates.push({ role: r, field_name: f, can_view: perms.can_view, can_edit: perms.can_edit });
+      }
+    }
+
+    for (const u of updates) {
+      await supabase
+        .from("field_access")
+        .update({ can_view: u.can_view, can_edit: u.can_edit, updated_at: new Date().toISOString() })
+        .eq("role", u.role as any)
+        .eq("field_name", u.field_name);
+    }
+
+    setSavingAccess(false);
+    refetchAccess();
+    toast({ title: "Hak akses berhasil disimpan" });
   };
 
   if (role !== "super_admin") {
@@ -99,121 +169,173 @@ export default function AppSettings() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Pengaturan Tampilan</h1>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <h1 className="text-2xl font-bold">Pengaturan</h1>
 
-      {/* App Name */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Type className="h-5 w-5" /> Nama Aplikasi
-          </CardTitle>
-          <CardDescription>Nama yang tampil di sidebar dan halaman login</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Input value={appName} onChange={(e) => setAppName(e.target.value)} placeholder="Nama Aplikasi" />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="tampilan">
+        <TabsList className="w-full">
+          <TabsTrigger value="tampilan" className="flex-1 gap-2">
+            <Palette className="h-4 w-4" /> Tampilan
+          </TabsTrigger>
+          <TabsTrigger value="akses" className="flex-1 gap-2">
+            <ShieldCheck className="h-4 w-4" /> Hak Akses
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Primary Color */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Palette className="h-5 w-5" /> Warna Utama
-          </CardTitle>
-          <CardDescription>Pilih warna utama aplikasi dari preset atau masukkan HSL kustom</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {COLOR_PRESETS.map((preset) => (
-              <button
-                key={preset.value}
-                onClick={() => setPrimaryColor(preset.value)}
-                className={`group flex flex-col items-center gap-1.5 rounded-lg border-2 p-2 transition-all ${
-                  primaryColor === preset.value ? "border-primary shadow-md" : "border-transparent hover:border-border"
-                }`}
-              >
-                <div
-                  className="h-8 w-8 rounded-full shadow-sm ring-1 ring-border"
-                  style={{ backgroundColor: `hsl(${preset.value})` }}
-                />
-                <span className="text-[10px] text-muted-foreground leading-tight text-center">{preset.label}</span>
-              </button>
-            ))}
-          </div>
-          <div className="space-y-2">
-            <Label>HSL Kustom</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-                placeholder="217 91% 50%"
-                className="font-mono text-sm"
-              />
-              <div
-                className="h-9 w-9 shrink-0 rounded-lg border shadow-sm"
-                style={{ backgroundColor: `hsl(${primaryColor})` }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="tampilan" className="space-y-6 mt-4">
+          {/* App Name */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Type className="h-5 w-5" /> Nama Aplikasi
+              </CardTitle>
+              <CardDescription>Nama yang tampil di sidebar dan halaman login</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input value={appName} onChange={(e) => setAppName(e.target.value)} placeholder="Nama Aplikasi" />
+            </CardContent>
+          </Card>
 
-      {/* Logo */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <ImageIcon className="h-5 w-5" /> Logo Aplikasi
-          </CardTitle>
-          <CardDescription>Upload logo yang tampil di sidebar (opsional)</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {logoUrl && (
-            <div className="flex items-center gap-4">
-              <img
-                src={logoUrl}
-                alt="Logo"
-                className="h-14 w-14 rounded-lg border object-contain bg-background p-1"
-              />
-              <Button variant="outline" size="sm" onClick={() => setLogoUrl("")}>
-                Hapus Logo
-              </Button>
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label>Upload Logo Baru</Label>
-            <Input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploading} />
-            {uploading && <p className="text-sm text-muted-foreground">Mengupload...</p>}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Preview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-3 rounded-lg border p-4" style={{ backgroundColor: `hsl(${primaryColor} / 0.08)` }}>
-            {logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="h-8 w-8 rounded object-contain" />
-            ) : (
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{ backgroundColor: `hsl(${primaryColor})` }}
-              >
-                <span className="text-sm font-bold text-white">{appName.charAt(0)}</span>
+          {/* Primary Color */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Palette className="h-5 w-5" /> Warna Utama
+              </CardTitle>
+              <CardDescription>Pilih warna utama aplikasi</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+                {COLOR_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    onClick={() => setPrimaryColor(preset.value)}
+                    className={`group flex flex-col items-center gap-1.5 rounded-lg border-2 p-2 transition-all ${
+                      primaryColor === preset.value ? "border-primary shadow-md" : "border-transparent hover:border-border"
+                    }`}
+                  >
+                    <div className="h-8 w-8 rounded-full shadow-sm ring-1 ring-border" style={{ backgroundColor: `hsl(${preset.value})` }} />
+                    <span className="text-[10px] text-muted-foreground leading-tight text-center">{preset.label}</span>
+                  </button>
+                ))}
               </div>
-            )}
-            <span className="font-bold" style={{ color: `hsl(${primaryColor})` }}>{appName}</span>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <Label>HSL Kustom</Label>
+                <div className="flex items-center gap-3">
+                  <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} placeholder="217 91% 50%" className="font-mono text-sm" />
+                  <div className="h-9 w-9 shrink-0 rounded-lg border shadow-sm" style={{ backgroundColor: `hsl(${primaryColor})` }} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
-        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-        Simpan Pengaturan
-      </Button>
+          {/* Logo */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <ImageIcon className="h-5 w-5" /> Logo Aplikasi
+              </CardTitle>
+              <CardDescription>Upload logo yang tampil di sidebar (opsional)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {logoUrl && (
+                <div className="flex items-center gap-4">
+                  <img src={logoUrl} alt="Logo" className="h-14 w-14 rounded-lg border object-contain bg-background p-1" />
+                  <Button variant="outline" size="sm" onClick={() => setLogoUrl("")}>Hapus Logo</Button>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Upload Logo Baru</Label>
+                <Input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploading} />
+                {uploading && <p className="text-sm text-muted-foreground">Mengupload...</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Preview */}
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Preview</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 rounded-lg border p-4" style={{ backgroundColor: `hsl(${primaryColor} / 0.08)` }}>
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="h-8 w-8 rounded object-contain" />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: `hsl(${primaryColor})` }}>
+                    <span className="text-sm font-bold text-white">{appName.charAt(0)}</span>
+                  </div>
+                )}
+                <span className="font-bold" style={{ color: `hsl(${primaryColor})` }}>{appName}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Simpan Pengaturan Tampilan
+          </Button>
+        </TabsContent>
+
+        <TabsContent value="akses" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <ShieldCheck className="h-5 w-5" /> Hak Akses Field per Role
+              </CardTitle>
+              <CardDescription>
+                Atur field mana yang bisa dilihat (View) dan diedit (Edit) oleh setiap role
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {accessLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {ROLES.map((r) => (
+                    <div key={r.key} className="space-y-3">
+                      <h3 className="font-semibold text-sm border-b pb-2">{r.label}</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {FIELDS.map((f) => {
+                          const perms = localAccess[r.key]?.[f.key] || { can_view: false, can_edit: false };
+                          return (
+                            <div key={f.key} className="flex items-center justify-between rounded-lg border p-3">
+                              <span className="text-sm font-medium">{f.label}</span>
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1.5">
+                                  <Switch
+                                    checked={perms.can_view}
+                                    onCheckedChange={() => toggleAccess(r.key, f.key, "can_view")}
+                                    className="scale-90"
+                                  />
+                                  <span className="text-xs text-muted-foreground">View</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Switch
+                                    checked={perms.can_edit}
+                                    onCheckedChange={() => toggleAccess(r.key, f.key, "can_edit")}
+                                    className="scale-90"
+                                  />
+                                  <span className="text-xs text-muted-foreground">Edit</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Button onClick={handleSaveAccess} disabled={savingAccess} className="w-full gap-2">
+            {savingAccess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Simpan Hak Akses
+          </Button>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

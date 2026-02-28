@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFieldAccess } from "@/hooks/useFieldAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,13 +40,7 @@ function ImagePreview({ file, existingUrl, onRemoveFile }: { file: File | null; 
           onLoad={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); }}
         />
         {file && (
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon"
-            className="absolute -right-2 -top-2 h-5 w-5 rounded-full"
-            onClick={onRemoveFile}
-          >
+          <Button type="button" variant="destructive" size="icon" className="absolute -right-2 -top-2 h-5 w-5 rounded-full" onClick={onRemoveFile}>
             <X className="h-3 w-3" />
           </Button>
         )}
@@ -60,20 +55,21 @@ function ImagePreview({ file, existingUrl, onRemoveFile }: { file: File | null; 
 
 export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPublic, sharedLinkUserId }: Props) {
   const { role, user } = useAuth();
+  // For public forms, use 'lapangan' field access as default
+  const { canEdit: canEditField, canView: canViewField, loading: accessLoading } = useFieldAccess(isPublic ? "lapangan" : undefined);
+
   const [nama, setNama] = useState(entry?.nama ?? "");
   const [alamat, setAlamat] = useState(entry?.alamat ?? "");
   const [nomorHp, setNomorHp] = useState(entry?.nomor_hp ?? "");
   const [saving, setSaving] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
-  // File states
   const [ktpFile, setKtpFile] = useState<File | null>(null);
   const [nibFile, setNibFile] = useState<File | null>(null);
   const [produkFile, setProdukFile] = useState<File | null>(null);
   const [verifikasiFile, setVerifikasiFile] = useState<File | null>(null);
   const [sertifikatFile, setSertifikatFile] = useState<File | null>(null);
 
-  // Refs for camera inputs
   const ktpCameraRef = useRef<HTMLInputElement>(null);
   const ktpFileRef = useRef<HTMLInputElement>(null);
   const produkCameraRef = useRef<HTMLInputElement>(null);
@@ -82,17 +78,6 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const verifikasiFileRef = useRef<HTMLInputElement>(null);
   const nibFileRef = useRef<HTMLInputElement>(null);
   const sertifikatFileRef = useRef<HTMLInputElement>(null);
-
-  const currentRole = isPublic ? "public" : role;
-
-  const canEdit = (field: string) => {
-    if (currentRole === "super_admin" || currentRole === "admin") return true;
-    if (currentRole === "lapangan" || currentRole === "public") {
-      return ["nama", "ktp", "alamat", "nomor_hp"].includes(field);
-    }
-    if (currentRole === "nib") return field === "nib";
-    return false;
-  };
 
   const uploadFile = async (file: File, bucket: string): Promise<string | null> => {
     const ext = file.name.split(".").pop();
@@ -113,9 +98,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true })
       );
       const { latitude, longitude } = pos.coords;
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-      );
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
       const data = await res.json();
       setAlamat(data.display_name || `${latitude}, ${longitude}`);
     } catch {
@@ -140,14 +123,14 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     if (sertifikatFile) sertifikat_url = await uploadFile(sertifikatFile, "sertifikat-halal");
 
     const payload: Record<string, unknown> = {};
-    if (canEdit("nama")) payload.nama = nama;
-    if (canEdit("alamat")) payload.alamat = alamat;
-    if (canEdit("nomor_hp")) payload.nomor_hp = nomorHp;
-    if (canEdit("ktp") && ktp_url) payload.ktp_url = ktp_url;
-    if (canEdit("nib") && nib_url) payload.nib_url = nib_url;
-    if ((currentRole === "super_admin" || currentRole === "admin") && foto_produk_url) payload.foto_produk_url = foto_produk_url;
-    if ((currentRole === "super_admin" || currentRole === "admin") && foto_verifikasi_url) payload.foto_verifikasi_url = foto_verifikasi_url;
-    if ((currentRole === "super_admin" || currentRole === "admin") && sertifikat_url) payload.sertifikat_url = sertifikat_url;
+    if (canEditField("nama")) payload.nama = nama;
+    if (canEditField("alamat")) payload.alamat = alamat;
+    if (canEditField("nomor_hp")) payload.nomor_hp = nomorHp;
+    if (canEditField("ktp") && ktp_url) payload.ktp_url = ktp_url;
+    if (canEditField("nib") && nib_url) payload.nib_url = nib_url;
+    if (canEditField("foto_produk") && foto_produk_url) payload.foto_produk_url = foto_produk_url;
+    if (canEditField("foto_verifikasi") && foto_verifikasi_url) payload.foto_verifikasi_url = foto_verifikasi_url;
+    if (canEditField("sertifikat") && sertifikat_url) payload.sertifikat_url = sertifikat_url;
 
     let error;
     let resultData: any = null;
@@ -177,6 +160,10 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     refs.forEach((r) => { if (r.current) r.current.value = ""; });
   };
 
+  if (accessLoading) {
+    return <div className="text-muted-foreground text-center py-8">Memuat form...</div>;
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -190,14 +177,14 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {canEdit("nama") && (
+        {canEditField("nama") && (
           <div className="space-y-2">
             <Label>Nama</Label>
             <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Nama lengkap" />
           </div>
         )}
 
-        {canEdit("ktp") && (
+        {canEditField("ktp") && (
           <div className="space-y-2">
             <Label>Foto KTP</Label>
             <input ref={ktpFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setKtpFile(e.target.files?.[0] ?? null)} />
@@ -214,7 +201,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           </div>
         )}
 
-        {canEdit("alamat") && (
+        {canEditField("alamat") && (
           <div className="space-y-2">
             <Label>Alamat</Label>
             <p className="text-xs text-muted-foreground">Ketik manual atau tekan ikon lokasi untuk ambil otomatis</p>
@@ -227,14 +214,14 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           </div>
         )}
 
-        {canEdit("nomor_hp") && (
+        {canEditField("nomor_hp") && (
           <div className="space-y-2">
             <Label>Nomor HP</Label>
             <Input value={nomorHp} onChange={(e) => setNomorHp(e.target.value)} placeholder="08xxxxxxxxxx" />
           </div>
         )}
 
-        {canEdit("nib") && (
+        {canEditField("nib") && (
           <div className="space-y-2">
             <Label>NIB (PDF / Foto)</Label>
             <input ref={nibFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setNibFile(e.target.files?.[0] ?? null)} />
@@ -259,59 +246,61 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           </div>
         )}
 
-        {(currentRole === "super_admin" || currentRole === "admin") && (
-          <>
-            <div className="space-y-2">
-              <Label>Foto Produk</Label>
-              <input ref={produkFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
-              <input ref={produkCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => produkFileRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" /> Pilih File
-                </Button>
-                <Button type="button" variant="outline" onClick={() => produkCameraRef.current?.click()}>
-                  <Camera className="h-4 w-4" />
-                </Button>
-              </div>
-              <ImagePreview file={produkFile} existingUrl={entry?.foto_produk_url} onRemoveFile={() => clearFile(setProdukFile, produkFileRef, produkCameraRef)} />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Foto Verifikasi Lapangan</Label>
-              <input ref={verifikasiFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
-              <input ref={verifikasiCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => verifikasiFileRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" /> Pilih File
-                </Button>
-                <Button type="button" variant="outline" onClick={() => verifikasiCameraRef.current?.click()}>
-                  <Camera className="h-4 w-4" />
-                </Button>
-              </div>
-              <ImagePreview file={verifikasiFile} existingUrl={entry?.foto_verifikasi_url} onRemoveFile={() => clearFile(setVerifikasiFile, verifikasiFileRef, verifikasiCameraRef)} />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Sertifikat Halal (PDF / Foto)</Label>
-              <input ref={sertifikatFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setSertifikatFile(e.target.files?.[0] ?? null)} />
-              <Button type="button" variant="outline" className="w-full" onClick={() => sertifikatFileRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" /> Pilih File Sertifikat
+        {canEditField("foto_produk") && (
+          <div className="space-y-2">
+            <Label>Foto Produk</Label>
+            <input ref={produkFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
+            <input ref={produkCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => produkFileRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> Pilih File
               </Button>
-              {sertifikatFile?.type?.startsWith("image/") ? (
-                <ImagePreview file={sertifikatFile} onRemoveFile={() => clearFile(setSertifikatFile, sertifikatFileRef)} />
-              ) : sertifikatFile ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ImageIcon className="h-4 w-4" />
-                  <span className="truncate">{sertifikatFile.name}</span>
-                  <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => clearFile(setSertifikatFile, sertifikatFileRef)}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (entry as any)?.sertifikat_url ? (
-                <p className="text-xs text-muted-foreground">Sertifikat sudah diupload ✓</p>
-              ) : null}
+              <Button type="button" variant="outline" onClick={() => produkCameraRef.current?.click()}>
+                <Camera className="h-4 w-4" />
+              </Button>
             </div>
-          </>
+            <ImagePreview file={produkFile} existingUrl={entry?.foto_produk_url} onRemoveFile={() => clearFile(setProdukFile, produkFileRef, produkCameraRef)} />
+          </div>
+        )}
+
+        {canEditField("foto_verifikasi") && (
+          <div className="space-y-2">
+            <Label>Foto Verifikasi Lapangan</Label>
+            <input ref={verifikasiFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
+            <input ref={verifikasiCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => verifikasiFileRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> Pilih File
+              </Button>
+              <Button type="button" variant="outline" onClick={() => verifikasiCameraRef.current?.click()}>
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
+            <ImagePreview file={verifikasiFile} existingUrl={entry?.foto_verifikasi_url} onRemoveFile={() => clearFile(setVerifikasiFile, verifikasiFileRef, verifikasiCameraRef)} />
+          </div>
+        )}
+
+        {canEditField("sertifikat") && (
+          <div className="space-y-2">
+            <Label>Sertifikat Halal (PDF / Foto)</Label>
+            <input ref={sertifikatFileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setSertifikatFile(e.target.files?.[0] ?? null)} />
+            <Button type="button" variant="outline" className="w-full" onClick={() => sertifikatFileRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" /> Pilih File Sertifikat
+            </Button>
+            {sertifikatFile?.type?.startsWith("image/") ? (
+              <ImagePreview file={sertifikatFile} onRemoveFile={() => clearFile(setSertifikatFile, sertifikatFileRef)} />
+            ) : sertifikatFile ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ImageIcon className="h-4 w-4" />
+                <span className="truncate">{sertifikatFile.name}</span>
+                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => clearFile(setSertifikatFile, sertifikatFileRef)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (entry as any)?.sertifikat_url ? (
+              <p className="text-xs text-muted-foreground">Sertifikat sudah diupload ✓</p>
+            ) : null}
+          </div>
         )}
 
         <div className="flex gap-2 pt-4">
