@@ -7,11 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Camera, Upload, MapPin, ArrowLeft, X, Image as ImageIcon } from "lucide-react";
+import { Camera, Upload, MapPin, ArrowLeft, X, Image as ImageIcon, Plus } from "lucide-react";
 import ImageLightbox from "@/components/ImageLightbox";
 import type { Tables } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
+
+interface EntryPhoto {
+  id: string;
+  entry_id: string;
+  photo_type: string;
+  url: string;
+}
 
 interface Props {
   groupId: string;
@@ -32,7 +39,7 @@ function ImagePreview({ file, existingUrl, onRemoveFile }: { file: File | null; 
 
   return (
     <>
-      <div className="relative mt-2 inline-block">
+      <div className="relative inline-block">
         <img
           src={src}
           alt="Preview"
@@ -40,24 +47,40 @@ function ImagePreview({ file, existingUrl, onRemoveFile }: { file: File | null; 
           onClick={() => setLightboxOpen(true)}
           onLoad={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); }}
         />
-        {file && (
-          <Button type="button" variant="destructive" size="icon" className="absolute -right-2 -top-2 h-5 w-5 rounded-full" onClick={onRemoveFile}>
-            <X className="h-3 w-3" />
-          </Button>
-        )}
-        {!file && existingUrl && (
-          <p className="mt-1 text-xs text-muted-foreground text-center">Tersimpan ✓</p>
-        )}
+        <Button type="button" variant="destructive" size="icon" className="absolute -right-2 -top-2 h-5 w-5 rounded-full" onClick={onRemoveFile}>
+          <X className="h-3 w-3" />
+        </Button>
       </div>
       <ImageLightbox src={src} open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
     </>
   );
 }
 
+function ExistingPhotoPreview({ url, onRemove }: { url: string; onRemove?: () => void }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  return (
+    <>
+      <div className="relative inline-block">
+        <img
+          src={url}
+          alt="Foto"
+          className="h-24 w-24 rounded-lg border border-border object-cover cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setLightboxOpen(true)}
+        />
+        {onRemove && (
+          <Button type="button" variant="destructive" size="icon" className="absolute -right-2 -top-2 h-5 w-5 rounded-full" onClick={onRemove}>
+            <X className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+      <ImageLightbox src={url} open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
+    </>
+  );
+}
+
 export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPublic, sharedLinkUserId, sourceLinkId }: Props) {
   const { role, user } = useAuth();
-  // For public forms, use 'lapangan' field access as default
-  const { canEdit: canEditField, canView: canViewField, loading: accessLoading } = useFieldAccess(isPublic ? "lapangan" : undefined);
+  const { canEdit: canEditField, loading: accessLoading } = useFieldAccess(isPublic ? "lapangan" : undefined);
 
   const [nama, setNama] = useState(entry?.nama ?? "");
   const [alamat, setAlamat] = useState(entry?.alamat ?? "");
@@ -67,18 +90,38 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
 
   const [ktpFile, setKtpFile] = useState<File | null>(null);
   const [nibFile, setNibFile] = useState<File | null>(null);
-  const [produkFile, setProdukFile] = useState<File | null>(null);
-  const [verifikasiFile, setVerifikasiFile] = useState<File | null>(null);
   const [sertifikatFile, setSertifikatFile] = useState<File | null>(null);
+
+  // Multiple photos
+  const [produkFiles, setProdukFiles] = useState<File[]>([]);
+  const [verifikasiFiles, setVerifikasiFiles] = useState<File[]>([]);
+  const [existingProdukPhotos, setExistingProdukPhotos] = useState<EntryPhoto[]>([]);
+  const [existingVerifikasiPhotos, setExistingVerifikasiPhotos] = useState<EntryPhoto[]>([]);
+  const [photosToDelete, setPhotosToDelete] = useState<string[]>([]);
 
   const ktpCameraRef = useRef<HTMLInputElement>(null);
   const ktpFileRef = useRef<HTMLInputElement>(null);
-  const produkCameraRef = useRef<HTMLInputElement>(null);
   const produkFileRef = useRef<HTMLInputElement>(null);
-  const verifikasiCameraRef = useRef<HTMLInputElement>(null);
+  const produkCameraRef = useRef<HTMLInputElement>(null);
   const verifikasiFileRef = useRef<HTMLInputElement>(null);
+  const verifikasiCameraRef = useRef<HTMLInputElement>(null);
   const nibFileRef = useRef<HTMLInputElement>(null);
   const sertifikatFileRef = useRef<HTMLInputElement>(null);
+
+  // Load existing photos when editing
+  useState(() => {
+    if (entry) {
+      supabase
+        .from("entry_photos" as any)
+        .select("*")
+        .eq("entry_id", entry.id)
+        .then(({ data }) => {
+          const photos = (data as unknown as EntryPhoto[]) ?? [];
+          setExistingProdukPhotos(photos.filter((p) => p.photo_type === "produk"));
+          setExistingVerifikasiPhotos(photos.filter((p) => p.photo_type === "verifikasi"));
+        });
+    }
+  });
 
   const uploadFile = async (file: File, bucket: string): Promise<string | null> => {
     const ext = file.name.split(".").pop();
@@ -113,14 +156,10 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
 
     let ktp_url = entry?.ktp_url ?? null;
     let nib_url = entry?.nib_url ?? null;
-    let foto_produk_url = entry?.foto_produk_url ?? null;
-    let foto_verifikasi_url = entry?.foto_verifikasi_url ?? null;
     let sertifikat_url = (entry as any)?.sertifikat_url ?? null;
 
     if (ktpFile) ktp_url = await uploadFile(ktpFile, "ktp-photos");
     if (nibFile) nib_url = await uploadFile(nibFile, "nib-documents");
-    if (produkFile) foto_produk_url = await uploadFile(produkFile, "product-photos");
-    if (verifikasiFile) foto_verifikasi_url = await uploadFile(verifikasiFile, "verification-photos");
     if (sertifikatFile) sertifikat_url = await uploadFile(sertifikatFile, "sertifikat-halal");
 
     const payload: Record<string, unknown> = {};
@@ -129,13 +168,45 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     if (canEditField("nomor_hp")) payload.nomor_hp = nomorHp;
     if (canEditField("ktp") && ktp_url) payload.ktp_url = ktp_url;
     if (canEditField("nib") && nib_url) payload.nib_url = nib_url;
-    if (canEditField("foto_produk") && foto_produk_url) payload.foto_produk_url = foto_produk_url;
-    if (canEditField("foto_verifikasi") && foto_verifikasi_url) payload.foto_verifikasi_url = foto_verifikasi_url;
     if (canEditField("sertifikat") && sertifikat_url) payload.sertifikat_url = sertifikat_url;
+
+    // For backward compat, also set foto_produk_url/foto_verifikasi_url to first photo
+    let firstProdukUrl = existingProdukPhotos.filter(p => !photosToDelete.includes(p.id))[0]?.url ?? null;
+    let firstVerifikasiUrl = existingVerifikasiPhotos.filter(p => !photosToDelete.includes(p.id))[0]?.url ?? null;
 
     let error;
     let resultData: any = null;
+    let entryId = entry?.id;
+
     if (entry) {
+      // Upload new produk/verifikasi photos
+      if (canEditField("foto_produk")) {
+        for (const file of produkFiles) {
+          const url = await uploadFile(file, "product-photos");
+          if (url) {
+            await supabase.from("entry_photos" as any).insert({ entry_id: entry.id, photo_type: "produk", url });
+            if (!firstProdukUrl) firstProdukUrl = url;
+          }
+        }
+      }
+      if (canEditField("foto_verifikasi")) {
+        for (const file of verifikasiFiles) {
+          const url = await uploadFile(file, "verification-photos");
+          if (url) {
+            await supabase.from("entry_photos" as any).insert({ entry_id: entry.id, photo_type: "verifikasi", url });
+            if (!firstVerifikasiUrl) firstVerifikasiUrl = url;
+          }
+        }
+      }
+
+      // Delete removed photos
+      if (photosToDelete.length > 0) {
+        await supabase.from("entry_photos" as any).delete().in("id", photosToDelete);
+      }
+
+      if (canEditField("foto_produk")) payload.foto_produk_url = firstProdukUrl;
+      if (canEditField("foto_verifikasi")) payload.foto_verifikasi_url = firstVerifikasiUrl;
+
       ({ error } = await supabase.from("data_entries").update(payload).eq("id", entry.id));
     } else {
       const res = await supabase.from("data_entries").insert({
@@ -144,9 +215,40 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         created_by: isPublic ? sharedLinkUserId : user?.id,
         pic_user_id: isPublic ? sharedLinkUserId : user?.id,
         source_link_id: sourceLinkId || null,
-      } as any).select("tracking_code" as any).single();
+      } as any).select("id, tracking_code" as any).single();
       error = res.error;
       resultData = res.data;
+      entryId = resultData?.id;
+
+      // Upload multiple photos for new entry
+      if (entryId) {
+        if (canEditField("foto_produk")) {
+          for (const file of produkFiles) {
+            const url = await uploadFile(file, "product-photos");
+            if (url) {
+              await supabase.from("entry_photos" as any).insert({ entry_id: entryId, photo_type: "produk", url });
+              if (!firstProdukUrl) firstProdukUrl = url;
+            }
+          }
+        }
+        if (canEditField("foto_verifikasi")) {
+          for (const file of verifikasiFiles) {
+            const url = await uploadFile(file, "verification-photos");
+            if (url) {
+              await supabase.from("entry_photos" as any).insert({ entry_id: entryId, photo_type: "verifikasi", url });
+              if (!firstVerifikasiUrl) firstVerifikasiUrl = url;
+            }
+          }
+        }
+
+        // Update entry with first photo URLs for backward compat
+        if (firstProdukUrl || firstVerifikasiUrl) {
+          const updatePayload: Record<string, unknown> = {};
+          if (firstProdukUrl) updatePayload.foto_produk_url = firstProdukUrl;
+          if (firstVerifikasiUrl) updatePayload.foto_verifikasi_url = firstVerifikasiUrl;
+          await supabase.from("data_entries").update(updatePayload).eq("id", entryId);
+        }
+      }
     }
 
     setSaving(false);
@@ -161,6 +263,26 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const clearFile = (setter: (f: File | null) => void, ...refs: React.RefObject<HTMLInputElement | null>[]) => {
     setter(null);
     refs.forEach((r) => { if (r.current) r.current.value = ""; });
+  };
+
+  const addProdukFile = (file: File | null) => {
+    if (file) setProdukFiles((prev) => [...prev, file]);
+  };
+
+  const removeProdukFile = (index: number) => {
+    setProdukFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addVerifikasiFile = (file: File | null) => {
+    if (file) setVerifikasiFiles((prev) => [...prev, file]);
+  };
+
+  const removeVerifikasiFile = (index: number) => {
+    setVerifikasiFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const markPhotoForDeletion = (photoId: string) => {
+    setPhotosToDelete((prev) => [...prev, photoId]);
   };
 
   if (accessLoading) {
@@ -251,35 +373,53 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
 
         {canEditField("foto_produk") && (
           <div className="space-y-2">
-            <Label>Foto Produk</Label>
-            <input ref={produkFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
-            <input ref={produkCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setProdukFile(e.target.files?.[0] ?? null)} />
+            <Label>Foto Produk (bisa lebih dari satu)</Label>
+            <input ref={produkFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { addProdukFile(e.target.files?.[0] ?? null); if (produkFileRef.current) produkFileRef.current.value = ""; }} />
+            <input ref={produkCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { addProdukFile(e.target.files?.[0] ?? null); if (produkCameraRef.current) produkCameraRef.current.value = ""; }} />
             <div className="flex gap-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => produkFileRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" /> Pilih File
+                <Plus className="mr-2 h-4 w-4" /> Tambah Foto
               </Button>
               <Button type="button" variant="outline" onClick={() => produkCameraRef.current?.click()}>
                 <Camera className="h-4 w-4" />
               </Button>
             </div>
-            <ImagePreview file={produkFile} existingUrl={entry?.foto_produk_url} onRemoveFile={() => clearFile(setProdukFile, produkFileRef, produkCameraRef)} />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {existingProdukPhotos
+                .filter((p) => !photosToDelete.includes(p.id))
+                .map((photo) => (
+                  <ExistingPhotoPreview key={photo.id} url={photo.url} onRemove={() => markPhotoForDeletion(photo.id)} />
+                ))}
+              {produkFiles.map((file, i) => (
+                <ImagePreview key={`new-produk-${i}`} file={file} onRemoveFile={() => removeProdukFile(i)} />
+              ))}
+            </div>
           </div>
         )}
 
         {canEditField("foto_verifikasi") && (
           <div className="space-y-2">
-            <Label>Foto Verifikasi Lapangan</Label>
-            <input ref={verifikasiFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
-            <input ref={verifikasiCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => setVerifikasiFile(e.target.files?.[0] ?? null)} />
+            <Label>Foto Verifikasi Lapangan (bisa lebih dari satu)</Label>
+            <input ref={verifikasiFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { addVerifikasiFile(e.target.files?.[0] ?? null); if (verifikasiFileRef.current) verifikasiFileRef.current.value = ""; }} />
+            <input ref={verifikasiCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { addVerifikasiFile(e.target.files?.[0] ?? null); if (verifikasiCameraRef.current) verifikasiCameraRef.current.value = ""; }} />
             <div className="flex gap-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => verifikasiFileRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" /> Pilih File
+                <Plus className="mr-2 h-4 w-4" /> Tambah Foto
               </Button>
               <Button type="button" variant="outline" onClick={() => verifikasiCameraRef.current?.click()}>
                 <Camera className="h-4 w-4" />
               </Button>
             </div>
-            <ImagePreview file={verifikasiFile} existingUrl={entry?.foto_verifikasi_url} onRemoveFile={() => clearFile(setVerifikasiFile, verifikasiFileRef, verifikasiCameraRef)} />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {existingVerifikasiPhotos
+                .filter((p) => !photosToDelete.includes(p.id))
+                .map((photo) => (
+                  <ExistingPhotoPreview key={photo.id} url={photo.url} onRemove={() => markPhotoForDeletion(photo.id)} />
+                ))}
+              {verifikasiFiles.map((file, i) => (
+                <ImagePreview key={`new-verifikasi-${i}`} file={file} onRemoveFile={() => removeVerifikasiFile(i)} />
+              ))}
+            </div>
           </div>
         )}
 

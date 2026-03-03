@@ -68,7 +68,8 @@ export default function GroupDetail() {
 
   // Filter & search state
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const isAdminInput = role === "admin_input";
+  const [statusFilter, setStatusFilter] = useState<string>(isAdminInput ? "siap_input" : "all");
 
   // Download state
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
@@ -446,21 +447,23 @@ export default function GroupDetail() {
                       className="pl-9"
                     />
                   </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <Select value={statusFilter} onValueChange={setStatusFilter} disabled={isAdminInput}>
                     <SelectTrigger className="w-[180px]">
                       <Filter className="mr-2 h-4 w-4" />
                       <SelectValue placeholder="Filter status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Semua Status</SelectItem>
-                      {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                        <SelectItem key={key} value={key}>
-                          <span className="flex items-center gap-1">
-                            <cfg.icon className="h-3 w-3" />
-                            {cfg.label}
-                          </span>
-                        </SelectItem>
-                      ))}
+                      {!isAdminInput && <SelectItem value="all">Semua Status</SelectItem>}
+                      {Object.entries(STATUS_CONFIG)
+                        .filter(([key]) => !isAdminInput || key === "siap_input")
+                        .map(([key, cfg]) => (
+                          <SelectItem key={key} value={key}>
+                            <span className="flex items-center gap-1">
+                              <cfg.icon className="h-3 w-3" />
+                              {cfg.label}
+                            </span>
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

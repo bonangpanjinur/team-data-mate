@@ -254,6 +254,38 @@ export type Database = {
         }
         Relationships: []
       }
+      entry_photos: {
+        Row: {
+          created_at: string
+          entry_id: string
+          id: string
+          photo_type: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id: string
+          id?: string
+          photo_type: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string
+          id?: string
+          photo_type?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_photos_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "data_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_access: {
         Row: {
           can_edit: boolean
