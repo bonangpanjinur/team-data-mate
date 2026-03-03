@@ -56,6 +56,7 @@ export default function GroupDetail() {
   const [group, setGroup] = useState<Tables<"groups"> | null>(null);
   const [entries, setEntries] = useState<DataEntry[]>([]);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
+  const [photoCounts, setPhotoCounts] = useState<Record<string, { produk: number; verifikasi: number }>>({});
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<DataEntry | null>(null);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
@@ -95,6 +96,21 @@ export default function GroupDetail() {
     if (!groupId) return;
     const { data } = await supabase.from("data_entries").select("*").eq("group_id", groupId).order("created_at", { ascending: false });
     setEntries(data ?? []);
+    // Fetch photo counts
+    if (data && data.length > 0) {
+      const entryIds = data.map((e) => e.id);
+      const { data: photos } = await supabase
+        .from("entry_photos" as any)
+        .select("entry_id, photo_type")
+        .in("entry_id", entryIds);
+      const counts: Record<string, { produk: number; verifikasi: number }> = {};
+      (photos ?? []).forEach((p: any) => {
+        if (!counts[p.entry_id]) counts[p.entry_id] = { produk: 0, verifikasi: 0 };
+        if (p.photo_type === "produk") counts[p.entry_id].produk++;
+        else if (p.photo_type === "verifikasi") counts[p.entry_id].verifikasi++;
+      });
+      setPhotoCounts(counts);
+    }
   };
 
   const fetchMembers = async () => {
@@ -548,8 +564,16 @@ export default function GroupDetail() {
                             <TableCell>
                               <code className="text-xs font-mono text-muted-foreground">{(e as any).tracking_code || "-"}</code>
                             </TableCell>
-                            <TableCell>{e.foto_produk_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
-                            <TableCell>{e.foto_verifikasi_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
+                            <TableCell>
+                              {(photoCounts[e.id]?.produk || 0) > 0 ? (
+                                <Badge variant="secondary">{photoCounts[e.id].produk} foto</Badge>
+                              ) : e.foto_produk_url ? <Badge variant="secondary">1 foto</Badge> : "-"}
+                            </TableCell>
+                            <TableCell>
+                              {(photoCounts[e.id]?.verifikasi || 0) > 0 ? (
+                                <Badge variant="secondary">{photoCounts[e.id].verifikasi} foto</Badge>
+                              ) : e.foto_verifikasi_url ? <Badge variant="secondary">1 foto</Badge> : "-"}
+                            </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
                                 {canDownload && (

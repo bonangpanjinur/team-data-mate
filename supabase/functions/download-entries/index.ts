@@ -93,12 +93,37 @@ serve(async (req) => {
         }
       };
 
-      await Promise.all([
+      // Fetch entry_photos for this entry
+      const { data: entryPhotos } = await supabaseAdmin
+        .from("entry_photos")
+        .select("*")
+        .eq("entry_id", entry.id);
+
+      const produkPhotos = (entryPhotos ?? []).filter((p: any) => p.photo_type === "produk");
+      const verifikasiPhotos = (entryPhotos ?? []).filter((p: any) => p.photo_type === "verifikasi");
+
+      const downloadPromises = [
         addFile(entry.ktp_url, "ktp"),
         addFile(entry.nib_url, "nib"),
-        addFile(entry.foto_produk_url, "foto_produk"),
-        addFile(entry.foto_verifikasi_url, "foto_verifikasi"),
-      ]);
+        addFile(entry.sertifikat_url, "sertifikat"),
+      ];
+
+      produkPhotos.forEach((p: any, i: number) => {
+        downloadPromises.push(addFile(p.url, `foto_produk_${i + 1}`));
+      });
+      verifikasiPhotos.forEach((p: any, i: number) => {
+        downloadPromises.push(addFile(p.url, `foto_verifikasi_${i + 1}`));
+      });
+
+      // Fallback: if no entry_photos but legacy URL exists
+      if (produkPhotos.length === 0 && entry.foto_produk_url) {
+        downloadPromises.push(addFile(entry.foto_produk_url, "foto_produk_1"));
+      }
+      if (verifikasiPhotos.length === 0 && entry.foto_verifikasi_url) {
+        downloadPromises.push(addFile(entry.foto_verifikasi_url, "foto_verifikasi_1"));
+      }
+
+      await Promise.all(downloadPromises);
     }
 
     const zipBuffer = await zip.generateAsync({ type: "uint8array" });
