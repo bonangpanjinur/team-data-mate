@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, KeyRound } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -33,6 +33,9 @@ export default function UsersManagement() {
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [editRole, setEditRole] = useState<AppRole>("lapangan");
   const [updatingRole, setUpdatingRole] = useState(false);
+  const [resetUser, setResetUser] = useState<UserWithRole | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -102,6 +105,22 @@ export default function UsersManagement() {
       toast({ title: "Role berhasil diubah" });
       setEditingUser(null);
       fetchUsers();
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetUser) return;
+    setResettingPassword(true);
+    const { data, error } = await supabase.functions.invoke("reset-password", {
+      body: { user_id: resetUser.id, new_password: resetPassword },
+    });
+    setResettingPassword(false);
+    if (error || data?.error) {
+      toast({ title: "Gagal reset password", description: error?.message || data?.error, variant: "destructive" });
+    } else {
+      toast({ title: "Password berhasil direset" });
+      setResetUser(null);
+      setResetPassword("");
     }
   };
 
@@ -190,6 +209,9 @@ export default function UsersManagement() {
                         <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setEditRole(u.role || "lapangan"); }}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setResetUser(u); setResetPassword(""); }}>
+                          <KeyRound className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -249,6 +271,25 @@ export default function UsersManagement() {
             </div>
             <Button className="w-full" onClick={handleUpdateRole} disabled={updatingRole}>
               {updatingRole ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetUser} onOpenChange={(v) => !v && setResetUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>Set password baru untuk {resetUser?.full_name || resetUser?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Password Baru</Label>
+              <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} minLength={6} placeholder="Minimal 6 karakter" />
+            </div>
+            <Button className="w-full" onClick={handleResetPassword} disabled={resettingPassword || resetPassword.length < 6}>
+              {resettingPassword ? "Menyimpan..." : "Reset Password"}
             </Button>
           </div>
         </DialogContent>
