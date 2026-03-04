@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -30,6 +30,9 @@ export default function UsersManagement() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<AppRole>("lapangan");
   const [creating, setCreating] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [editRole, setEditRole] = useState<AppRole>("lapangan");
+  const [updatingRole, setUpdatingRole] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -82,6 +85,22 @@ export default function UsersManagement() {
       toast({ title: "Gagal menghapus user", description: error?.message || data?.error, variant: "destructive" });
     } else {
       toast({ title: "User dihapus" });
+      fetchUsers();
+    }
+  };
+
+  const handleUpdateRole = async () => {
+    if (!editingUser) return;
+    setUpdatingRole(true);
+    // Upsert: delete old role, insert new
+    await supabase.from("user_roles").delete().eq("user_id", editingUser.id);
+    const { error } = await supabase.from("user_roles").insert({ user_id: editingUser.id, role: editRole });
+    setUpdatingRole(false);
+    if (error) {
+      toast({ title: "Gagal update role", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Role berhasil diubah" });
+      setEditingUser(null);
       fetchUsers();
     }
   };
@@ -167,25 +186,30 @@ export default function UsersManagement() {
                   </TableCell>
                   <TableCell>
                     {u.role !== "super_admin" && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus User</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setEditRole(u.role || "lapangan"); }}>
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus User</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
@@ -201,6 +225,34 @@ export default function UsersManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={(v) => !v && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ubah Role</DialogTitle>
+            <DialogDescription>Ubah role untuk {editingUser?.full_name || editingUser?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Role Baru</Label>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="admin_input">Admin Input</SelectItem>
+                  <SelectItem value="lapangan">Lapangan</SelectItem>
+                  <SelectItem value="nib">NIB</SelectItem>
+                  <SelectItem value="umkm">UMKM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleUpdateRole} disabled={updatingRole}>
+              {updatingRole ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

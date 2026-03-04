@@ -84,9 +84,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const items = role ? NAV_ITEMS[role as keyof typeof NAV_ITEMS] ?? [] : [];
 
-  // Fetch unread notification count for UMKM
+  // Fetch unread notification count for all roles
   useEffect(() => {
-    if (role !== "umkm" || !user) return;
+    if (!user) return;
     const fetchCount = async () => {
       const { count } = await supabase
         .from("notifications" as any)
@@ -97,12 +97,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     };
     fetchCount();
     const channel = supabase
-      .channel("umkm-notifications")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, () => fetchCount())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications" }, () => fetchCount())
+      .channel("user-notifications")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => fetchCount())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => fetchCount())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [role, user]);
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -127,14 +127,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               {user?.email?.split("@")[0]}
             </button>
             <span className="text-xs text-muted-foreground capitalize">{role}</span>
-            {role === "umkm" && (
-              <Button variant="ghost" size="icon" className="relative" onClick={() => navigate("/umkm")}>
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="icon" className="relative" onClick={() => navigate(role === "umkm" ? "/umkm" : "/dashboard")}>
                 <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
               </Button>
             )}
             <Button
