@@ -225,6 +225,34 @@ export default function UsersManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={(v) => !v && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ubah Role</DialogTitle>
+            <DialogDescription>Ubah role untuk {editingUser?.full_name || editingUser?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Role Baru</Label>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="admin_input">Admin Input</SelectItem>
+                  <SelectItem value="lapangan">Lapangan</SelectItem>
+                  <SelectItem value="nib">NIB</SelectItem>
+                  <SelectItem value="umkm">UMKM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" onClick={handleUpdateRole} disabled={updatingRole}>
+              {updatingRole ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
