@@ -6,24 +6,39 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Shield, ArrowRight, Search, TrendingUp, Store } from "lucide-react";
+import { Store, ArrowRight, ArrowLeft } from "lucide-react";
 
-export default function Login() {
+export default function Register() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 6) {
+      toast({ title: "Password minimal 6 karakter", variant: "destructive" });
+      return;
+    }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          register_as: "umkm",
+        },
+      },
+    });
     setLoading(false);
 
     if (error) {
-      toast({ title: "Login gagal", description: error.message, variant: "destructive" });
+      toast({ title: "Registrasi gagal", description: error.message, variant: "destructive" });
     } else {
-      navigate("/dashboard");
+      toast({ title: "Registrasi berhasil", description: "Anda akan diarahkan ke dashboard." });
+      navigate("/umkm");
     }
   };
 
@@ -32,13 +47,23 @@ export default function Login() {
       <Card className="w-full max-w-sm shadow-lg border-0">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-md">
-            <Shield className="h-7 w-7 text-primary-foreground" />
+            <Store className="h-7 w-7 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">HalalTrack</CardTitle>
-          <CardDescription>Masuk ke akun Anda</CardDescription>
+          <CardTitle className="text-2xl font-bold tracking-tight">Daftar UMKM</CardTitle>
+          <CardDescription>Buat akun untuk memantau status sertifikasi Anda</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Nama Lengkap</Label>
+              <Input
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Nama usaha / pemilik"
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -57,34 +82,21 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Minimal 6 karakter"
                 required
               />
             </div>
             <Button type="submit" className="w-full gap-2" disabled={loading}>
-              {loading ? "Memproses..." : <>Masuk <ArrowRight className="h-4 w-4" /></>}
+              {loading ? "Memproses..." : <>Daftar <ArrowRight className="h-4 w-4" /></>}
             </Button>
           </form>
-          <div className="mt-4 pt-4 border-t border-border text-center space-y-2">
-            <Link to="/register">
-              <Button variant="secondary" size="sm" className="w-full gap-2 mb-2">
-                <Store className="h-3.5 w-3.5" />
-                Daftar Akun UMKM
-              </Button>
-            </Link>
-            <p className="text-xs text-muted-foreground">Punya kode tracking sertifikat?</p>
-            <Link to="/tracking">
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Search className="h-3.5 w-3.5" />
-                Cek Status Sertifikat
-              </Button>
-            </Link>
-            <Link to="/statistik">
-              <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground">
-                <TrendingUp className="h-3.5 w-3.5" />
-                Lihat Statistik Publik
-              </Button>
-            </Link>
+          <div className="mt-4 pt-4 border-t border-border text-center">
+            <p className="text-sm text-muted-foreground">
+              Sudah punya akun?{" "}
+              <Link to="/login" className="text-primary font-medium hover:underline">
+                Masuk
+              </Link>
+            </p>
           </div>
         </CardContent>
       </Card>

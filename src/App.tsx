@@ -19,6 +19,7 @@ import Profile from "@/pages/Profile";
 import AppSettings from "@/pages/AppSettings";
 import Komisi from "@/pages/Komisi";
 import UmkmDashboard from "@/pages/UmkmDashboard";
+import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
 import { ReactNode } from "react";
 
@@ -51,6 +52,7 @@ function AuthRoute({ children }: { children: ReactNode }) {
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+    <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
     <Route path="/public-form/:token" element={<PublicForm />} />
     <Route path="/f/:slug" element={<PublicForm />} />
     <Route path="/tracking" element={<TrackingPage />} />

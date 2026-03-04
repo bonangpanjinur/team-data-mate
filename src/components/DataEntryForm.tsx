@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldAccess } from "@/hooks/useFieldAccess";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Camera, Upload, MapPin, ArrowLeft, X, Image as ImageIcon, Plus } from "lucide-react";
 import ImageLightbox from "@/components/ImageLightbox";
@@ -81,12 +82,33 @@ function ExistingPhotoPreview({ url, onRemove }: { url: string; onRemove?: () =>
 export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPublic, sharedLinkUserId, sourceLinkId }: Props) {
   const { role, user } = useAuth();
   const { canEdit: canEditField, loading: accessLoading } = useFieldAccess(isPublic ? "lapangan" : undefined);
+  const isAdmin = role === "super_admin" || role === "admin";
 
   const [nama, setNama] = useState(entry?.nama ?? "");
   const [alamat, setAlamat] = useState(entry?.alamat ?? "");
   const [nomorHp, setNomorHp] = useState(entry?.nomor_hp ?? "");
+  const [umkmUserId, setUmkmUserId] = useState(entry?.umkm_user_id ?? "");
+  const [umkmUsers, setUmkmUsers] = useState<{ id: string; full_name: string | null; email: string | null }[]>([]);
   const [saving, setSaving] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+
+  // Load UMKM users for admin
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "umkm" as any);
+      if (!roles?.length) return;
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      setUmkmUsers(profiles ?? []);
+    })();
+  }, [isAdmin]);
 
   const [ktpFile, setKtpFile] = useState<File | null>(null);
   const [nibFile, setNibFile] = useState<File | null>(null);
@@ -173,6 +195,9 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     // For backward compat, also set foto_produk_url/foto_verifikasi_url to first photo
     let firstProdukUrl = existingProdukPhotos.filter(p => !photosToDelete.includes(p.id))[0]?.url ?? null;
     let firstVerifikasiUrl = existingVerifikasiPhotos.filter(p => !photosToDelete.includes(p.id))[0]?.url ?? null;
+
+    if (isAdmin && umkmUserId) payload.umkm_user_id = umkmUserId;
+    if (isAdmin && umkmUserId === "") payload.umkm_user_id = null;
 
     let error;
     let resultData: any = null;
@@ -306,6 +331,25 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           <div className="space-y-2">
             <Label>Nama</Label>
             <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Nama lengkap" />
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="space-y-2">
+            <Label>Hubungkan ke Akun UMKM (opsional)</Label>
+            <Select value={umkmUserId || "__none__"} onValueChange={(v) => setUmkmUserId(v === "__none__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih akun UMKM..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Tidak ada —</SelectItem>
+                {umkmUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.full_name || u.email || u.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
