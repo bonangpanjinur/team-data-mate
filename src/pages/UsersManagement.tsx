@@ -108,6 +108,22 @@ export default function UsersManagement() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!resetUser) return;
+    setResettingPassword(true);
+    const { data, error } = await supabase.functions.invoke("reset-password", {
+      body: { user_id: resetUser.id, new_password: resetPassword },
+    });
+    setResettingPassword(false);
+    if (error || data?.error) {
+      toast({ title: "Gagal reset password", description: error?.message || data?.error, variant: "destructive" });
+    } else {
+      toast({ title: "Password berhasil direset" });
+      setResetUser(null);
+      setResetPassword("");
+    }
+  };
+
   const roleBadgeVariant = (role: AppRole | null) => {
     switch (role) {
       case "super_admin": return "default";
