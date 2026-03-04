@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check, Download } from "lucide-react";
+import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check, Download, MessageCircle, History } from "lucide-react";
 import { Link } from "react-router-dom";
 import ProgressTimeline from "@/components/ProgressTimeline";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
@@ -28,6 +29,7 @@ interface UmkmEntry {
   nib_url: string | null;
   sertifikat_url: string | null;
   created_at: string;
+  pic_user_id: string | null;
 }
 
 interface Notification {
@@ -38,12 +40,29 @@ interface Notification {
   created_at: string;
 }
 
+interface AuditLog {
+  id: string;
+  old_status: string | null;
+  new_status: string;
+  changed_at: string;
+  changed_by: string | null;
+}
+
+interface PicProfile {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+}
+
 export default function UmkmDashboard() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<UmkmEntry[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [picProfiles, setPicProfiles] = useState<Record<string, PicProfile>>({});
+  const [auditLogs, setAuditLogs] = useState<Record<string, AuditLog[]>>({});
+  const [openHistory, setOpenHistory] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -51,23 +70,53 @@ export default function UmkmDashboard() {
       const [entriesRes, notifRes] = await Promise.all([
         supabase
           .from("data_entries")
-          .select("id, nama, status, tracking_code, nib_url, sertifikat_url, created_at")
+          .select("id, nama, status, tracking_code, nib_url, sertifikat_url, created_at, pic_user_id")
           .eq("umkm_user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase
-          .from("notifications" as any)
+          .from("notifications")
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .limit(20),
       ]);
-      setEntries(entriesRes.data ?? []);
+
+      const entriesData = (entriesRes.data ?? []) as UmkmEntry[];
+      setEntries(entriesData);
       setNotifications((notifRes.data as unknown as Notification[]) ?? []);
+
+      // Fetch PIC profiles
+      const picIds = [...new Set(entriesData.map(e => e.pic_user_id).filter(Boolean))] as string[];
+      if (picIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone")
+          .in("id", picIds);
+        const map: Record<string, PicProfile> = {};
+        (profiles ?? []).forEach((p: any) => { map[p.id] = p; });
+        setPicProfiles(map);
+      }
+
+      // Fetch audit logs for all entries
+      const entryIds = entriesData.map(e => e.id);
+      if (entryIds.length > 0) {
+        const { data: logs } = await supabase
+          .from("audit_logs")
+          .select("id, entry_id, old_status, new_status, changed_at, changed_by")
+          .in("entry_id", entryIds)
+          .order("changed_at", { ascending: false });
+        const logMap: Record<string, AuditLog[]> = {};
+        (logs ?? []).forEach((l: any) => {
+          if (!logMap[l.entry_id]) logMap[l.entry_id] = [];
+          logMap[l.entry_id].push(l);
+        });
+        setAuditLogs(logMap);
+      }
+
       setLoading(false);
     };
     fetchData();
 
-    // Realtime
     const channel = supabase
       .channel("umkm-notif-dashboard")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
@@ -78,14 +127,22 @@ export default function UmkmDashboard() {
   }, [user]);
 
   const markAsRead = async (id: string) => {
-    await supabase.from("notifications" as any).update({ is_read: true }).eq("id", id);
+    await supabase.from("notifications").update({ is_read: true } as any).eq("id", id);
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
   };
 
   const markAllAsRead = async () => {
     if (!user) return;
-    await supabase.from("notifications" as any).update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
+    await supabase.from("notifications").update({ is_read: true } as any).eq("user_id", user.id).eq("is_read", false);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  };
+
+  const getStatusLabel = (status: string) => STATUS_CONFIG[status]?.label || status;
+
+  const openWhatsApp = (phone: string, entryName: string | null) => {
+    const cleaned = phone.replace(/\D/g, "").replace(/^0/, "62");
+    const msg = encodeURIComponent(`Halo, saya ingin bertanya tentang status data UMKM "${entryName || "saya"}".`);
+    window.open(`https://wa.me/${cleaned}?text=${msg}`, "_blank");
   };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -176,6 +233,9 @@ export default function UmkmDashboard() {
           {entries.map((entry) => {
             const cfg = getStatusConfig(entry.status);
             const StatusIcon = cfg.icon;
+            const pic = entry.pic_user_id ? picProfiles[entry.pic_user_id] : null;
+            const entryLogs = auditLogs[entry.id] ?? [];
+
             return (
               <Card key={entry.id}>
                 <CardHeader className="pb-2">
@@ -191,8 +251,28 @@ export default function UmkmDashboard() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Progress Timeline */}
                   <ProgressTimeline currentStatus={entry.status} />
+
+                  {/* PIC & WhatsApp */}
+                  {pic && (
+                    <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Petugas: </span>
+                        <span className="font-medium">{pic.full_name || "Petugas"}</span>
+                      </div>
+                      {pic.phone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700"
+                          onClick={() => openWhatsApp(pic.phone!, entry.nama)}
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          WhatsApp
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
@@ -222,6 +302,46 @@ export default function UmkmDashboard() {
                       )}
                     </div>
                   </div>
+
+                  {/* Status History */}
+                  {entryLogs.length > 0 && (
+                    <Collapsible
+                      open={openHistory[entry.id] ?? false}
+                      onOpenChange={(open) => setOpenHistory(prev => ({ ...prev, [entry.id]: open }))}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="gap-1.5 text-xs w-full justify-start text-muted-foreground">
+                          <History className="h-3.5 w-3.5" />
+                          Riwayat Perubahan Status ({entryLogs.length})
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="mt-2 space-y-1.5 border-l-2 border-muted ml-2 pl-4">
+                          {entryLogs.map((log) => (
+                            <div key={log.id} className="text-xs">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  {getStatusLabel(log.new_status)}
+                                </Badge>
+                                {log.old_status && (
+                                  <span className="text-muted-foreground">
+                                    dari {getStatusLabel(log.old_status)}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-muted-foreground mt-0.5">
+                                {new Date(log.changed_at).toLocaleDateString("id-ID", {
+                                  day: "numeric", month: "short", year: "numeric",
+                                  hour: "2-digit", minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
                   <p className="text-xs text-muted-foreground">
                     Terdaftar: {new Date(entry.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
