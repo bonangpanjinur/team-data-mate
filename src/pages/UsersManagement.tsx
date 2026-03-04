@@ -89,6 +89,22 @@ export default function UsersManagement() {
     }
   };
 
+  const handleUpdateRole = async () => {
+    if (!editingUser) return;
+    setUpdatingRole(true);
+    // Upsert: delete old role, insert new
+    await supabase.from("user_roles").delete().eq("user_id", editingUser.id);
+    const { error } = await supabase.from("user_roles").insert({ user_id: editingUser.id, role: editRole });
+    setUpdatingRole(false);
+    if (error) {
+      toast({ title: "Gagal update role", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Role berhasil diubah" });
+      setEditingUser(null);
+      fetchUsers();
+    }
+  };
+
   const roleBadgeVariant = (role: AppRole | null) => {
     switch (role) {
       case "super_admin": return "default";
