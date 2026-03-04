@@ -45,7 +45,15 @@ serve(async (req) => {
 
     const { user_id } = await req.json();
 
-    // Delete related records first to avoid FK constraint errors
+    // Nullify references in data_entries to avoid FK constraint errors
+    await supabaseAdmin.from("data_entries").update({ created_by: null }).eq("created_by", user_id);
+    await supabaseAdmin.from("data_entries").update({ pic_user_id: null }).eq("pic_user_id", user_id);
+    await supabaseAdmin.from("data_entries").update({ umkm_user_id: null }).eq("umkm_user_id", user_id);
+
+    // Nullify references in audit_logs
+    await supabaseAdmin.from("audit_logs").update({ changed_by: null }).eq("changed_by", user_id);
+
+    // Delete related records
     await supabaseAdmin.from("commissions").delete().eq("user_id", user_id);
     await supabaseAdmin.from("disbursements").delete().eq("user_id", user_id);
     await supabaseAdmin.from("notifications").delete().eq("user_id", user_id);

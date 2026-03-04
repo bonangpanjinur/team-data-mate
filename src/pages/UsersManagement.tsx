@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
@@ -68,16 +68,18 @@ export default function UsersManagement() {
       setNewEmail("");
       setNewName("");
       setNewPassword("");
+      // Delay to allow DB trigger to create profile
+      await new Promise((r) => setTimeout(r, 800));
       fetchUsers();
     }
   };
 
   const handleDelete = async (userId: string) => {
-    const { error } = await supabase.functions.invoke("delete-user", {
+    const { data, error } = await supabase.functions.invoke("delete-user", {
       body: { user_id: userId },
     });
-    if (error) {
-      toast({ title: "Gagal menghapus user", description: error.message, variant: "destructive" });
+    if (error || data?.error) {
+      toast({ title: "Gagal menghapus user", description: error?.message || data?.error, variant: "destructive" });
     } else {
       toast({ title: "User dihapus" });
       fetchUsers();
@@ -106,6 +108,7 @@ export default function UsersManagement() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Buat User Baru</DialogTitle>
+              <DialogDescription>Isi data untuk membuat akun user baru.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
