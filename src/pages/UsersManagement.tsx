@@ -30,6 +30,9 @@ export default function UsersManagement() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<AppRole>("lapangan");
   const [creating, setCreating] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [editRole, setEditRole] = useState<AppRole>("lapangan");
+  const [updatingRole, setUpdatingRole] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
