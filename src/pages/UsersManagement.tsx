@@ -275,6 +275,25 @@ export default function UsersManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetUser} onOpenChange={(v) => !v && setResetUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>Set password baru untuk {resetUser?.full_name || resetUser?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Password Baru</Label>
+              <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} minLength={6} placeholder="Minimal 6 karakter" />
+            </div>
+            <Button className="w-full" onClick={handleResetPassword} disabled={resettingPassword || resetPassword.length < 6}>
+              {resettingPassword ? "Menyimpan..." : "Reset Password"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
