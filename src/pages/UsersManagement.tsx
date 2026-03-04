@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Pencil, KeyRound } from "lucide-react";
+import { Plus, Trash2, Pencil, KeyRound, Search } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -36,6 +36,8 @@ export default function UsersManagement() {
   const [resetUser, setResetUser] = useState<UserWithRole | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterRole, setFilterRole] = useState<string>("all");
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -184,6 +186,24 @@ export default function UsersManagement() {
 
       <Card>
         <CardContent className="p-0">
+          <div className="flex flex-col sm:flex-row gap-3 p-4 border-b">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Cari nama atau email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+            </div>
+            <Select value={filterRole} onValueChange={setFilterRole}>
+              <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Semua Role" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Role</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="admin_input">Admin Input</SelectItem>
+                <SelectItem value="lapangan">Lapangan</SelectItem>
+                <SelectItem value="nib">NIB</SelectItem>
+                <SelectItem value="umkm">UMKM</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -194,7 +214,14 @@ export default function UsersManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
+              {users
+                .filter((u) => {
+                  const q = searchQuery.toLowerCase();
+                  const matchSearch = !q || (u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
+                  const matchRole = filterRole === "all" || u.role === filterRole;
+                  return matchSearch && matchRole;
+                })
+                .map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.full_name || "-"}</TableCell>
                   <TableCell>{u.email}</TableCell>
