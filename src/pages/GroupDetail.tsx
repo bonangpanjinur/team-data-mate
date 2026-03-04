@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -117,7 +117,7 @@ export default function GroupDetail() {
   const fetchEntries = async () => {
     if (!groupId) return;
     let query = supabase.from("data_entries").select("*").eq("group_id", groupId).order("created_at", { ascending: false });
-    if (role !== "super_admin" && user) query = query.eq("created_by", user.id);
+    // Let RLS handle access control - no client-side filter needed
     const { data } = await query;
     setEntries(data ?? []);
     // Fetch photo counts
@@ -414,13 +414,13 @@ export default function GroupDetail() {
           if (payload.eventType === "INSERT") {
             const newEntry = payload.new as DataEntry;
             // Non-super_admin only sees own entries
-            if (role !== "super_admin" && user && (newEntry as any).created_by !== user.id) return;
+            if (role !== "super_admin" && role !== "admin" && user && (newEntry as any).created_by !== user.id) return;
             setEntries((prev) => [newEntry, ...prev]);
             toast({ title: "Data baru masuk", description: newEntry.nama || "Entri baru ditambahkan" });
           } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as DataEntry;
             // Non-super_admin only updates own entries
-            if (role !== "super_admin" && user && (updated as any).created_by !== user.id) return;
+            if (role !== "super_admin" && role !== "admin" && user && (updated as any).created_by !== user.id) return;
             setEntries((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
             const oldStatus = (payload.old as any)?.status;
             if (oldStatus && oldStatus !== updated.status) {
@@ -431,7 +431,7 @@ export default function GroupDetail() {
             }
           } else if (payload.eventType === "DELETE") {
             const deleted = payload.old as DataEntry;
-            if (role !== "super_admin" && user && (deleted as any).created_by !== user.id) return;
+            if (role !== "super_admin" && role !== "admin" && user && (deleted as any).created_by !== user.id) return;
             setEntries((prev) => prev.filter((e) => e.id !== deleted.id));
           }
         }
@@ -739,7 +739,10 @@ export default function GroupDetail() {
                     <Button><Plus className="mr-2 h-4 w-4" /> Tambah Anggota</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>Tambah Anggota</DialogTitle></DialogHeader>
+                    <DialogHeader>
+                      <DialogTitle>Tambah Anggota</DialogTitle>
+                      <DialogDescription>Pilih user untuk ditambahkan sebagai anggota grup.</DialogDescription>
+                    </DialogHeader>
                     <div className="space-y-4">
                       <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                         <SelectTrigger><SelectValue placeholder="Pilih user..." /></SelectTrigger>
@@ -888,7 +891,10 @@ export default function GroupDetail() {
       {/* Link UMKM Dialog */}
       <Dialog open={linkUmkmOpen} onOpenChange={(o) => { setLinkUmkmOpen(o); if (!o) { setLinkUmkmEntryId(null); setSelectedUmkmUserId(""); } }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Hubungkan ke Akun UMKM</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Hubungkan ke Akun UMKM</DialogTitle>
+            <DialogDescription>Pilih akun UMKM untuk dihubungkan dengan entri ini.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
             <Select value={selectedUmkmUserId || "__none__"} onValueChange={(v) => setSelectedUmkmUserId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Pilih akun UMKM..." /></SelectTrigger>

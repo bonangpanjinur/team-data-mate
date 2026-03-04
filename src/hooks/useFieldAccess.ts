@@ -14,9 +14,15 @@ export function useFieldAccess(targetRole?: string) {
   const [loading, setLoading] = useState(true);
 
   const effectiveRole = targetRole || role;
+  const isSuperRole = effectiveRole === "super_admin" || effectiveRole === "admin";
 
   useEffect(() => {
     if (!effectiveRole) return;
+    if (isSuperRole) {
+      setFields([]);
+      setLoading(false);
+      return;
+    }
     const fetch = async () => {
       setLoading(true);
       const { data } = await supabase
@@ -29,8 +35,14 @@ export function useFieldAccess(targetRole?: string) {
     fetch();
   }, [effectiveRole]);
 
-  const canView = (field: string) => fields.find((f) => f.field_name === field)?.can_view ?? false;
-  const canEdit = (field: string) => fields.find((f) => f.field_name === field)?.can_edit ?? false;
+  const canView = (field: string) => {
+    if (isSuperRole) return true;
+    return fields.find((f) => f.field_name === field)?.can_view ?? false;
+  };
+  const canEdit = (field: string) => {
+    if (isSuperRole) return true;
+    return fields.find((f) => f.field_name === field)?.can_edit ?? false;
+  };
 
   return { fields, loading, canView, canEdit };
 }
