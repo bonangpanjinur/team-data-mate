@@ -182,9 +182,10 @@ export default function AppSettings() {
     for (const u of updates) {
       await supabase
         .from("field_access")
-        .update({ can_view: u.can_view, can_edit: u.can_edit, updated_at: new Date().toISOString() })
-        .eq("role", u.role as any)
-        .eq("field_name", u.field_name);
+        .upsert(
+          { role: u.role as any, field_name: u.field_name, can_view: u.can_view, can_edit: u.can_edit, updated_at: new Date().toISOString() },
+          { onConflict: "role,field_name" }
+        );
     }
 
     setSavingAccess(false);
@@ -197,8 +198,10 @@ export default function AppSettings() {
     for (const [r, amount] of Object.entries(rates)) {
       await supabase
         .from("commission_rates")
-        .update({ amount_per_entry: amount, updated_at: new Date().toISOString() } as any)
-        .eq("role", r as any);
+        .upsert(
+          { role: r as any, amount_per_entry: amount, updated_at: new Date().toISOString() },
+          { onConflict: "role" }
+        );
     }
     setSavingRates(false);
     toast({ title: "Tarif komisi berhasil disimpan" });

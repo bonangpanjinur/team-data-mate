@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Wallet, TrendingUp, Clock, CheckCircle, Download, CalendarIcon } from "lucide-react";
 
 interface Commission {
@@ -262,9 +263,23 @@ export default function Komisi() {
           <p className="text-sm text-muted-foreground">
             {pendingIds.length} komisi pending
           </p>
-          <Button size="sm" onClick={() => handleMarkPaid(pendingIds)}>
-            Cairkan Semua Pending
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm">Cairkan Semua Pending</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cairkan Semua Komisi Pending?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {pendingIds.length} komisi senilai {formatRp(totalPending)} akan ditandai sebagai sudah dibayar. Tindakan ini tidak bisa dibatalkan.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleMarkPaid(pendingIds)}>Ya, Cairkan</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 

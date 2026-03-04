@@ -18,6 +18,7 @@ interface LinkRow {
   created_at: string;
   user_id: string;
   group_name?: string;
+  entry_count?: number;
 }
 
 interface GroupOption {
@@ -37,9 +38,17 @@ export default function ShareLinks() {
     const { data } = await supabase.from("shared_links").select("*").eq("user_id", user.id);
     if (data) {
       const groupIds = [...new Set(data.map((l: any) => l.group_id))];
-      const { data: groupData } = await supabase.from("groups").select("id, name").in("id", groupIds);
+      const linkIds = data.map((l: any) => l.id);
+      const [{ data: groupData }, { data: entryCountData }] = await Promise.all([
+        supabase.from("groups").select("id, name").in("id", groupIds),
+        supabase.from("data_entries").select("source_link_id").in("source_link_id", linkIds),
+      ]);
       const gMap = new Map(groupData?.map((g: any) => [g.id, g.name]));
-      setLinks(data.map((l: any) => ({ ...l, group_name: gMap.get(l.group_id) })));
+      const countMap = new Map<string, number>();
+      (entryCountData ?? []).forEach((e: any) => {
+        countMap.set(e.source_link_id, (countMap.get(e.source_link_id) || 0) + 1);
+      });
+      setLinks(data.map((l: any) => ({ ...l, group_name: gMap.get(l.group_id), entry_count: countMap.get(l.id) || 0 })));
     }
   };
 
@@ -124,6 +133,7 @@ export default function ShareLinks() {
               <TableRow>
                 <TableHead>Group</TableHead>
                 <TableHead>URL</TableHead>
+                <TableHead>Data Masuk</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Dibuat</TableHead>
                 <TableHead className="w-32">Aksi</TableHead>
@@ -139,6 +149,9 @@ export default function ShareLinks() {
                     </code>
                   </TableCell>
                   <TableCell>
+                    <Badge variant="outline">{l.entry_count ?? 0}</Badge>
+                  </TableCell>
+                   <TableCell>
                     <Badge
                       variant={l.is_active ? "default" : "secondary"}
                       className="cursor-pointer"
@@ -167,7 +180,7 @@ export default function ShareLinks() {
               ))}
               {links.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Belum ada link
                   </TableCell>
                 </TableRow>

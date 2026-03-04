@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, KeyRound, User, Mail } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Save, KeyRound, User, Mail, ShieldCheck } from "lucide-react";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -96,6 +97,13 @@ export default function Profile() {
           <CardDescription>Ubah nama tampilan Anda</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {role && (
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Role:</span>
+              <Badge variant="secondary" className="capitalize">{role.replace("_", " ")}</Badge>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Nama Lengkap</Label>
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nama lengkap" />

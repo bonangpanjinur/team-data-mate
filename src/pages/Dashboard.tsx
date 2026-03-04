@@ -293,7 +293,7 @@ export default function Dashboard() {
       )}
 
       {/* Charts Row */}
-      {(role === "super_admin" || role === "admin") && (
+      {totalEntries > 0 && (
         <div className="grid gap-6 lg:grid-cols-2 mb-6">
           <Card>
             <CardHeader>
@@ -362,7 +362,7 @@ export default function Dashboard() {
       )}
 
       {/* Group Bar Chart */}
-      {(role === "super_admin" || role === "admin") && groupData.length > 0 && (
+      {groupData.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-base">Jumlah Entri per Group</CardTitle>

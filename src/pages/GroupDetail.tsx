@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award, AlertTriangle, Link2 } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import PhotoGallery from "@/components/PhotoGallery";
@@ -418,6 +419,8 @@ export default function GroupDetail() {
             toast({ title: "Data baru masuk", description: newEntry.nama || "Entri baru ditambahkan" });
           } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as DataEntry;
+            // Non-super_admin only updates own entries
+            if (role !== "super_admin" && user && (updated as any).created_by !== user.id) return;
             setEntries((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
             const oldStatus = (payload.old as any)?.status;
             if (oldStatus && oldStatus !== updated.status) {
@@ -428,6 +431,7 @@ export default function GroupDetail() {
             }
           } else if (payload.eventType === "DELETE") {
             const deleted = payload.old as DataEntry;
+            if (role !== "super_admin" && user && (deleted as any).created_by !== user.id) return;
             setEntries((prev) => prev.filter((e) => e.id !== deleted.id));
           }
         }
@@ -694,9 +698,25 @@ export default function GroupDetail() {
                                     <Download className="h-4 w-4" />
                                   </Button>
                                 )}
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteEntry(e.id)}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Hapus Entri</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Yakin ingin menghapus data "{e.nama || "ini"}"? Tindakan ini tidak bisa dibatalkan.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteEntry(e.id)}>Hapus</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </TableCell>
                           </TableRow>
