@@ -127,14 +127,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               {user?.email?.split("@")[0]}
             </button>
             <span className="text-xs text-muted-foreground capitalize">{role}</span>
-            {role === "umkm" && (
-              <Button variant="ghost" size="icon" className="relative" onClick={() => navigate("/umkm")}>
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="icon" className="relative" onClick={() => navigate(role === "umkm" ? "/umkm" : "/dashboard")}>
                 <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
               </Button>
             )}
             <Button
