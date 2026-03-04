@@ -84,9 +84,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const items = role ? NAV_ITEMS[role as keyof typeof NAV_ITEMS] ?? [] : [];
 
-  // Fetch unread notification count for UMKM
+  // Fetch unread notification count for all roles
   useEffect(() => {
-    if (role !== "umkm" || !user) return;
+    if (!user) return;
     const fetchCount = async () => {
       const { count } = await supabase
         .from("notifications" as any)
@@ -97,12 +97,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     };
     fetchCount();
     const channel = supabase
-      .channel("umkm-notifications")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, () => fetchCount())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications" }, () => fetchCount())
+      .channel("user-notifications")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => fetchCount())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => fetchCount())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [role, user]);
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
