@@ -45,6 +45,15 @@ serve(async (req) => {
 
     const { user_id } = await req.json();
 
+    // Delete related records first to avoid FK constraint errors
+    await supabaseAdmin.from("commissions").delete().eq("user_id", user_id);
+    await supabaseAdmin.from("disbursements").delete().eq("user_id", user_id);
+    await supabaseAdmin.from("notifications").delete().eq("user_id", user_id);
+    await supabaseAdmin.from("group_members").delete().eq("user_id", user_id);
+    await supabaseAdmin.from("shared_links").delete().eq("user_id", user_id);
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", user_id);
+    await supabaseAdmin.from("profiles").delete().eq("id", user_id);
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id);
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: corsHeaders });
