@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award, AlertTriangle } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import PhotoGallery from "@/components/PhotoGallery";
 import type { Tables, Enums } from "@/integrations/supabase/types";
@@ -37,8 +37,10 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
   siap_input: { label: "Siap Input", variant: "secondary", icon: CheckCircle2 },
   lengkap: { label: "Lengkap", variant: "secondary", icon: CheckCircle2 },
+  ktp_terdaftar_nib: { label: "KTP Terdaftar NIB", variant: "destructive", icon: AlertTriangle },
   terverifikasi: { label: "Terverifikasi", variant: "default", icon: ShieldCheck },
   nib_selesai: { label: "NIB Selesai", variant: "secondary", icon: FileCheck },
+  ktp_terdaftar_sertifikat: { label: "KTP Terdaftar Sertifikat", variant: "destructive", icon: AlertTriangle },
   pengajuan: { label: "Pengajuan", variant: "outline", icon: Send },
   sertifikat_selesai: { label: "Sertifikat Selesai", variant: "default", icon: Award },
 };
@@ -78,6 +80,17 @@ export default function GroupDetail() {
   const [downloading, setDownloading] = useState(false);
 
   const canDownload = role === "super_admin" || role === "admin" || role === "admin_input";
+
+  // Role-based allowed status changes
+  const ROLE_ALLOWED_STATUSES: Record<string, string[]> = {
+    super_admin: Object.keys(STATUS_CONFIG),
+    admin: Object.keys(STATUS_CONFIG),
+    lapangan: ["ktp_terdaftar_nib"],
+    nib: ["ktp_terdaftar_nib"],
+    admin_input: ["nib_selesai", "ktp_terdaftar_sertifikat"],
+  };
+  const allowedStatuses = ROLE_ALLOWED_STATUSES[role || ""] || [];
+  const canChangeStatus = allowedStatuses.length > 0;
 
   const filteredEntries = entries.filter((e) => {
     const matchesSearch = searchQuery === "" ||
@@ -435,21 +448,25 @@ export default function GroupDetail() {
                       Export CSV{selectedEntries.size > 0 ? ` (${selectedEntries.size})` : ""}
                     </Button>
                   )}
-                  {canDownload && selectedEntries.size > 0 && (
+                  {canChangeStatus && selectedEntries.size > 0 && (
                     <Select onValueChange={handleBulkStatusChange}>
                       <SelectTrigger className="w-[200px]">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         <SelectValue placeholder={`Ubah status (${selectedEntries.size})`} />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                          <SelectItem key={key} value={key}>
-                            <span className="flex items-center gap-1">
-                              <cfg.icon className="h-3 w-3" />
-                              {cfg.label}
-                            </span>
-                          </SelectItem>
-                        ))}
+                        {allowedStatuses.map((key) => {
+                          const cfg = STATUS_CONFIG[key];
+                          if (!cfg) return null;
+                          return (
+                            <SelectItem key={key} value={key}>
+                              <span className="flex items-center gap-1">
+                                <cfg.icon className="h-3 w-3" />
+                                {cfg.label}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   )}
@@ -497,7 +514,7 @@ export default function GroupDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          {canDownload && (
+                          {(canDownload || canChangeStatus) && (
                             <TableHead className="w-10">
                               <Checkbox
                                 checked={selectedEntries.size === entries.length && entries.length > 0}
@@ -521,7 +538,7 @@ export default function GroupDetail() {
                       <TableBody>
                         {filteredEntries.map((e) => (
                           <TableRow key={e.id}>
-                            {canDownload && (
+                            {(canDownload || canChangeStatus) && (
                               <TableCell onClick={(ev) => ev.stopPropagation()}>
                                 <Checkbox
                                   checked={selectedEntries.has(e.id)}
@@ -531,28 +548,38 @@ export default function GroupDetail() {
                             )}
                             <TableCell className="font-medium cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nama || "-"}</TableCell>
                             <TableCell>
-                              {canDownload ? (
+                              {canChangeStatus ? (
                                 <Select
                                   value={(e as any).status || "belum_lengkap"}
                                   onValueChange={(v) => handleStatusChange(e.id, v)}
                                 >
-                                  <SelectTrigger className="h-8 w-[140px]">
+                                  <SelectTrigger className="h-8 w-[170px]">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                                      <SelectItem key={key} value={key}>
-                                        <span className="flex items-center gap-1">
-                                          <cfg.icon className="h-3 w-3" />
-                                          {cfg.label}
-                                        </span>
-                                      </SelectItem>
-                                    ))}
+                                    {/* Always show current status */}
+                                    {(() => {
+                                      const currentStatus = (e as any).status || "belum_lengkap";
+                                      const statusesToShow = new Set([currentStatus, ...allowedStatuses]);
+                                      return [...statusesToShow].map((key) => {
+                                        const cfg = STATUS_CONFIG[key];
+                                        if (!cfg) return null;
+                                        return (
+                                          <SelectItem key={key} value={key}>
+                                            <span className="flex items-center gap-1">
+                                              <cfg.icon className="h-3 w-3" />
+                                              {cfg.label}
+                                            </span>
+                                          </SelectItem>
+                                        );
+                                      });
+                                    })()}
                                   </SelectContent>
                                 </Select>
                               ) : (
                                 (() => {
                                   const cfg = STATUS_CONFIG[(e as any).status || "belum_lengkap"];
+                                  if (!cfg) return <Badge variant="outline">{(e as any).status}</Badge>;
                                   return <Badge variant={cfg.variant}><cfg.icon className="mr-1 h-3 w-3" />{cfg.label}</Badge>;
                                 })()
                               )}

@@ -14,8 +14,10 @@ interface StatusCount {
 const STATUS_CONFIG: Record<string, { label: string; icon: typeof Users; color: string; bg: string }> = {
   belum_lengkap: { label: "Data Terisi", icon: Users, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-950" },
   lengkap: { label: "Data Lengkap", icon: Users, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-950" },
+  ktp_terdaftar_nib: { label: "KTP Terdaftar NIB", icon: Users, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-100 dark:bg-orange-950" },
   terverifikasi: { label: "Terverifikasi", icon: FileCheck, color: "text-cyan-600 dark:text-cyan-400", bg: "bg-cyan-100 dark:bg-cyan-950" },
   nib_selesai: { label: "NIB Selesai", icon: FileCheck, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-100 dark:bg-indigo-950" },
+  ktp_terdaftar_sertifikat: { label: "KTP Terdaftar Sertifikat", icon: Users, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-100 dark:bg-orange-950" },
   pengajuan: { label: "Dalam Pengajuan", icon: Send, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-950" },
   sertifikat_selesai: { label: "Tersertifikasi", icon: Award, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-950" },
 };

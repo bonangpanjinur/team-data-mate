@@ -506,6 +506,8 @@ export type Database = {
         | "nib_selesai"
         | "pengajuan"
         | "sertifikat_selesai"
+        | "ktp_terdaftar_nib"
+        | "ktp_terdaftar_sertifikat"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -642,6 +644,8 @@ export const Constants = {
         "nib_selesai",
         "pengajuan",
         "sertifikat_selesai",
+        "ktp_terdaftar_nib",
+        "ktp_terdaftar_sertifikat",
       ],
     },
   },

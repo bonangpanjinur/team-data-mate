@@ -24,8 +24,10 @@ const STATUS_LABELS: Record<string, string> = {
   belum_lengkap: "Belum Lengkap",
   siap_input: "Siap Input",
   lengkap: "Lengkap",
+  ktp_terdaftar_nib: "KTP Terdaftar NIB",
   terverifikasi: "Terverifikasi",
   nib_selesai: "NIB Selesai",
+  ktp_terdaftar_sertifikat: "KTP Terdaftar Sertifikat",
   pengajuan: "Pengajuan",
   sertifikat_selesai: "Sertifikat Selesai",
 };
@@ -34,8 +36,10 @@ const STATUS_COLORS: Record<string, string> = {
   belum_lengkap: "hsl(0 84% 60%)",
   siap_input: "hsl(45 93% 47%)",
   lengkap: "hsl(120 60% 50%)",
+  ktp_terdaftar_nib: "hsl(30 90% 50%)",
   terverifikasi: "hsl(142 71% 45%)",
   nib_selesai: "hsl(200 80% 50%)",
+  ktp_terdaftar_sertifikat: "hsl(15 85% 50%)",
   pengajuan: "hsl(270 60% 55%)",
   sertifikat_selesai: "hsl(160 84% 39%)",
 };
@@ -44,8 +48,10 @@ const STATUS_BG: Record<string, string> = {
   belum_lengkap: "bg-red-100 dark:bg-red-950",
   siap_input: "bg-yellow-100 dark:bg-yellow-950",
   lengkap: "bg-lime-100 dark:bg-lime-950",
+  ktp_terdaftar_nib: "bg-orange-100 dark:bg-orange-950",
   terverifikasi: "bg-green-100 dark:bg-green-950",
   nib_selesai: "bg-blue-100 dark:bg-blue-950",
+  ktp_terdaftar_sertifikat: "bg-orange-100 dark:bg-orange-950",
   pengajuan: "bg-purple-100 dark:bg-purple-950",
   sertifikat_selesai: "bg-emerald-100 dark:bg-emerald-950",
 };
