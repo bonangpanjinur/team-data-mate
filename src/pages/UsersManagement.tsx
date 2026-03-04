@@ -209,6 +209,9 @@ export default function UsersManagement() {
                         <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setEditRole(u.role || "lapangan"); }}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setResetUser(u); setResetPassword(""); }}>
+                          <KeyRound className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon">
