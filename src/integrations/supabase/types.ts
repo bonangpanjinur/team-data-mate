@@ -151,10 +151,12 @@ export type Database = {
           alamat: string | null
           created_at: string
           created_by: string | null
+          email: string | null
           foto_produk_url: string | null
           foto_verifikasi_url: string | null
           group_id: string
           id: string
+          kata_sandi: string | null
           ktp_url: string | null
           nama: string | null
           nib_url: string | null
@@ -171,10 +173,12 @@ export type Database = {
           alamat?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
           foto_produk_url?: string | null
           foto_verifikasi_url?: string | null
           group_id: string
           id?: string
+          kata_sandi?: string | null
           ktp_url?: string | null
           nama?: string | null
           nib_url?: string | null
@@ -191,10 +195,12 @@ export type Database = {
           alamat?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
           foto_produk_url?: string | null
           foto_verifikasi_url?: string | null
           group_id?: string
           id?: string
+          kata_sandi?: string | null
           ktp_url?: string | null
           nama?: string | null
           nib_url?: string | null

@@ -37,11 +37,7 @@ interface AuditLog {
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
   siap_input: { label: "Siap Input", variant: "secondary", icon: CheckCircle2 },
-  lengkap: { label: "Lengkap", variant: "secondary", icon: CheckCircle2 },
   ktp_terdaftar_nib: { label: "KTP Terdaftar NIB", variant: "destructive", icon: AlertTriangle },
-  terverifikasi: { label: "Terverifikasi", variant: "default", icon: ShieldCheck },
-  nib_selesai: { label: "NIB Selesai", variant: "secondary", icon: FileCheck },
-  ktp_terdaftar_sertifikat: { label: "KTP Terdaftar Sertifikat", variant: "destructive", icon: AlertTriangle },
   pengajuan: { label: "Pengajuan", variant: "outline", icon: Send },
   sertifikat_selesai: { label: "Sertifikat Selesai", variant: "default", icon: Award },
 };
@@ -95,7 +91,7 @@ export default function GroupDetail() {
     admin: Object.keys(STATUS_CONFIG),
     lapangan: [],
     nib: ["ktp_terdaftar_nib"],
-    admin_input: ["nib_selesai", "ktp_terdaftar_sertifikat"],
+    admin_input: ["siap_input", "pengajuan"],
   };
   const allowedStatuses = ROLE_ALLOWED_STATUSES[role || ""] || [];
   const canChangeStatus = allowedStatuses.length > 0;
@@ -580,6 +576,8 @@ export default function GroupDetail() {
                           )}
                           <TableHead>Nama</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Kata Sandi</TableHead>
                           <TableHead>Alamat</TableHead>
                           <TableHead>No HP</TableHead>
                           <TableHead>KTP</TableHead>
@@ -640,6 +638,8 @@ export default function GroupDetail() {
                                 })()
                               )}
                             </TableCell>
+                            <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>
+                            <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>
                             <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{e.alamat || "-"}</TableCell>
                             <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
                             <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>

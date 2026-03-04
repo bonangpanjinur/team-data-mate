@@ -87,6 +87,8 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const [nama, setNama] = useState(entry?.nama ?? "");
   const [alamat, setAlamat] = useState(entry?.alamat ?? "");
   const [nomorHp, setNomorHp] = useState(entry?.nomor_hp ?? "");
+  const [email, setEmail] = useState((entry as any)?.email ?? "");
+  const [kataSandi, setKataSandi] = useState((entry as any)?.kata_sandi ?? "");
   const [saving, setSaving] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
@@ -169,6 +171,8 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
     if (canEditField("nama")) payload.nama = nama;
     if (canEditField("alamat")) payload.alamat = alamat;
     if (canEditField("nomor_hp")) payload.nomor_hp = nomorHp;
+    if (canEditField("email")) payload.email = email;
+    if (canEditField("kata_sandi")) payload.kata_sandi = kataSandi;
     if (canEditField("ktp") && ktp_url) payload.ktp_url = ktp_url;
     if (canEditField("nib") && nib_url) payload.nib_url = nib_url;
     if (canEditField("sertifikat") && sertifikat_url) payload.sertifikat_url = sertifikat_url;
@@ -348,6 +352,20 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           <div className="space-y-2">
             <Label>Nomor HP</Label>
             <Input value={nomorHp} onChange={(e) => setNomorHp(e.target.value)} placeholder="08xxxxxxxxxx" />
+          </div>
+        )}
+
+        {canEditField("email") && (
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@contoh.com" />
+          </div>
+        )}
+
+        {canEditField("kata_sandi") && (
+          <div className="space-y-2">
+            <Label>Kata Sandi</Label>
+            <Input value={kataSandi} onChange={(e) => setKataSandi(e.target.value)} placeholder="Kata sandi akun" />
           </div>
         )}
 
