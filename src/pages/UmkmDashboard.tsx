@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check } from "lucide-react";
+import { Clock, CheckCircle2, ShieldCheck, FileCheck, Send, Award, AlertTriangle, Search, Bell, Check, Download } from "lucide-react";
 import { Link } from "react-router-dom";
+import ProgressTimeline from "@/components/ProgressTimeline";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
@@ -189,12 +190,20 @@ export default function UmkmDashboard() {
                     <p className="text-xs text-muted-foreground font-mono">{entry.tracking_code}</p>
                   )}
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Progress Timeline */}
+                  <ProgressTimeline currentStatus={entry.status} />
+
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">NIB:</span>{" "}
                       {entry.nib_url ? (
-                        <a href={entry.nib_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">Lihat NIB</a>
+                        <div className="flex items-center gap-2 mt-1">
+                          <a href={entry.nib_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">Lihat NIB</a>
+                          <a href={entry.nib_url} download className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                            <Download className="h-3 w-3" /> Unduh
+                          </a>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">Belum ada</span>
                       )}
@@ -202,13 +211,18 @@ export default function UmkmDashboard() {
                     <div>
                       <span className="text-muted-foreground">Sertifikat:</span>{" "}
                       {entry.sertifikat_url ? (
-                        <a href={entry.sertifikat_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">Lihat Sertifikat</a>
+                        <div className="flex items-center gap-2 mt-1">
+                          <a href={entry.sertifikat_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">Lihat Sertifikat</a>
+                          <a href={entry.sertifikat_url} download className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                            <Download className="h-3 w-3" /> Unduh
+                          </a>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">Belum ada</span>
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="text-xs text-muted-foreground">
                     Terdaftar: {new Date(entry.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </CardContent>

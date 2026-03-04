@@ -1,11 +1,12 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, FolderOpen, FileText, Link2, TrendingUp, Eye } from "lucide-react";
+import { Users, FolderOpen, FileText, Link2, TrendingUp, Eye, Trophy, CalendarDays } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFieldAccess } from "@/hooks/useFieldAccess";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChartContainer,
   ChartTooltip,
@@ -94,6 +95,7 @@ const barChartConfig: ChartConfig = {
 
 type GroupStat = { name: string; count: number };
 type StatusStat = { status: string; label: string; count: number; fill: string };
+type AdminStat = { user_id: string; name: string; count: number };
 
 const FIELD_LABELS: Record<string, string> = {
   nama: "Nama",
@@ -124,6 +126,8 @@ export default function Dashboard() {
   const [statusData, setStatusData] = useState<StatusStat[]>([]);
   const [groupData, setGroupData] = useState<GroupStat[]>([]);
   const [recentEntries, setRecentEntries] = useState<DataEntry[]>([]);
+  const [adminStats, setAdminStats] = useState<AdminStat[]>([]);
+  const [adminPeriod, setAdminPeriod] = useState("all");
 
   const visibleFields = fields.filter((f) => f.can_view);
 
@@ -208,6 +212,36 @@ export default function Dashboard() {
     fetchChartData();
     fetchRecentEntries();
   }, [role, user]);
+
+  // Admin performance stats for super_admin
+  useEffect(() => {
+    if (role !== "super_admin") return;
+    const fetchAdminStats = async () => {
+      let query = supabase.from("data_entries").select("created_by");
+      if (adminPeriod === "today") {
+        query = query.gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
+      } else if (adminPeriod === "week") {
+        const d = new Date(); d.setDate(d.getDate() - 7);
+        query = query.gte("created_at", d.toISOString());
+      } else if (adminPeriod === "month") {
+        const d = new Date(); d.setMonth(d.getMonth() - 1);
+        query = query.gte("created_at", d.toISOString());
+      }
+      const { data: entries } = await query;
+      if (!entries) return;
+      const counts: Record<string, number> = {};
+      entries.forEach((e: any) => { if (e.created_by) counts[e.created_by] = (counts[e.created_by] || 0) + 1; });
+      const userIds = Object.keys(counts);
+      if (userIds.length === 0) { setAdminStats([]); return; }
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
+      const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name || p.email || "Unknown"]));
+      const stats: AdminStat[] = userIds
+        .map((uid) => ({ user_id: uid, name: profileMap.get(uid) || "Unknown", count: counts[uid] }))
+        .sort((a, b) => b.count - a.count);
+      setAdminStats(stats);
+    };
+    fetchAdminStats();
+  }, [role, adminPeriod]);
 
   const cards = [
     { label: "Group Halal", value: stats.groups, icon: FolderOpen, show: true },
@@ -380,6 +414,69 @@ export default function Dashboard() {
                 </Bar>
               </BarChart>
             </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin Performance - super_admin only */}
+      {role === "super_admin" && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Trophy className="h-4 w-4" />
+                  Kinerja Admin
+                </CardTitle>
+                <CardDescription>Ranking berdasarkan jumlah data yang di-input</CardDescription>
+              </div>
+              <Select value={adminPeriod} onValueChange={setAdminPeriod}>
+                <SelectTrigger className="w-[140px]">
+                  <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="today">Hari Ini</SelectItem>
+                  <SelectItem value="week">7 Hari</SelectItem>
+                  <SelectItem value="month">30 Hari</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {adminStats.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Belum ada data</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead className="text-right">Jumlah Input</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {adminStats.map((a, i) => (
+                    <TableRow key={a.user_id}>
+                      <TableCell>
+                        {i < 3 ? (
+                          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                            i === 0 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300" :
+                            i === 1 ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" :
+                            "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                          }`}>{i + 1}</span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">{i + 1}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">{a.name}</TableCell>
+                      <TableCell className="text-right font-semibold">{a.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}
