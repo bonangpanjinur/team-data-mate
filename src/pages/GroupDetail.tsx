@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
+import PhotoGallery from "@/components/PhotoGallery";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
@@ -565,14 +566,26 @@ export default function GroupDetail() {
                               <code className="text-xs font-mono text-muted-foreground">{(e as any).tracking_code || "-"}</code>
                             </TableCell>
                             <TableCell>
-                              {(photoCounts[e.id]?.produk || 0) > 0 ? (
-                                <Badge variant="secondary">{photoCounts[e.id].produk} foto</Badge>
-                              ) : e.foto_produk_url ? <Badge variant="secondary">1 foto</Badge> : "-"}
+                              {((photoCounts[e.id]?.produk || 0) > 0 || e.foto_produk_url) ? (
+                                <PhotoGallery
+                                  entryId={e.id}
+                                  legacyProdukUrl={e.foto_produk_url}
+                                  legacyVerifikasiUrl={e.foto_verifikasi_url}
+                                  photoType="produk"
+                                  trigger={<Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">{photoCounts[e.id]?.produk || 1} foto</Badge>}
+                                />
+                              ) : "-"}
                             </TableCell>
                             <TableCell>
-                              {(photoCounts[e.id]?.verifikasi || 0) > 0 ? (
-                                <Badge variant="secondary">{photoCounts[e.id].verifikasi} foto</Badge>
-                              ) : e.foto_verifikasi_url ? <Badge variant="secondary">1 foto</Badge> : "-"}
+                              {((photoCounts[e.id]?.verifikasi || 0) > 0 || e.foto_verifikasi_url) ? (
+                                <PhotoGallery
+                                  entryId={e.id}
+                                  legacyProdukUrl={e.foto_produk_url}
+                                  legacyVerifikasiUrl={e.foto_verifikasi_url}
+                                  photoType="verifikasi"
+                                  trigger={<Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">{photoCounts[e.id]?.verifikasi || 1} foto</Badge>}
+                                />
+                              ) : "-"}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
