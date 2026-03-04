@@ -112,8 +112,8 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
   const sertifikatFileRef = useRef<HTMLInputElement>(null);
 
   // Load existing photos when editing
-  useState(() => {
-    if (entry) {
+  useEffect(() => {
+    if (entry?.id) {
       supabase
         .from("entry_photos" as any)
         .select("*")
@@ -124,7 +124,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
           setExistingVerifikasiPhotos(photos.filter((p) => p.photo_type === "verifikasi"));
         });
     }
-  });
+  }, [entry?.id]);
 
   const uploadFile = async (file: File, bucket: string): Promise<string | null> => {
     const ext = file.name.split(".").pop();

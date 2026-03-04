@@ -65,6 +65,22 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [appName, setAppName] = useState("HalalTrack");
+  const [logoUrl, setLogoUrl] = useState("");
+
+  // Fetch app settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase.from("app_settings").select("key, value");
+      if (data) {
+        data.forEach((row: any) => {
+          if (row.key === "app_name" && row.value) setAppName(row.value);
+          if (row.key === "logo_url" && row.value) setLogoUrl(row.value);
+        });
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const items = role ? NAV_ITEMS[role as keyof typeof NAV_ITEMS] ?? [] : [];
 
@@ -99,8 +115,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         {/* Top bar */}
         <header className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="text-sm font-bold tracking-tight">HalalTrack</span>
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="h-5 w-5 rounded object-contain" />
+            ) : (
+              <Shield className="h-5 w-5 text-primary" />
+            )}
+            <span className="text-sm font-bold tracking-tight">{appName}</span>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => navigate("/profile")} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -160,8 +180,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className="flex w-56 flex-col border-r bg-sidebar-background">
         <div className="flex items-center gap-2.5 border-b px-4 py-4">
-          <Shield className="h-6 w-6 text-sidebar-primary" />
-          <span className="font-bold tracking-tight text-sidebar-primary-foreground">HalalTrack</span>
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo" className="h-6 w-6 rounded object-contain" />
+          ) : (
+            <Shield className="h-6 w-6 text-sidebar-primary" />
+          )}
+          <span className="font-bold tracking-tight text-sidebar-primary-foreground">{appName}</span>
         </div>
         <nav className="flex-1 space-y-1 p-2">
           {items.map((item) => (
