@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award, AlertTriangle, Link2 } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import PhotoGallery from "@/components/PhotoGallery";
+import EntryMobileCard from "@/components/EntryMobileCard";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
