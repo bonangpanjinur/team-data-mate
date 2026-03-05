@@ -38,6 +38,8 @@ export default function UsersManagement() {
   const [resettingPassword, setResettingPassword] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
