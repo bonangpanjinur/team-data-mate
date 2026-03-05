@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw, History, ArrowRight, FileCheck, Send, Award, AlertTriangle, Link2 } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import PhotoGallery from "@/components/PhotoGallery";
+import EntryMobileCard from "@/components/EntryMobileCard";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
@@ -561,170 +562,201 @@ export default function GroupDetail() {
                   </CardContent>
                 </Card>
               ) : (
-                <Card>
-                  <CardContent className="p-0 overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {(canDownload || canChangeStatus) && (
-                            <TableHead className="w-10">
-                              <Checkbox
-                                checked={selectedEntries.size === entries.length && entries.length > 0}
-                                onCheckedChange={toggleAll}
-                              />
-                            </TableHead>
-                          )}
-                          <TableHead>Nama</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Kata Sandi</TableHead>
-                          <TableHead>Alamat</TableHead>
-                          <TableHead>No HP</TableHead>
-                          <TableHead>KTP</TableHead>
-                          <TableHead>NIB</TableHead>
-                          <TableHead>Sertifikat</TableHead>
-                          <TableHead>Tracking</TableHead>
-                          <TableHead>Produk</TableHead>
-                          <TableHead>Verifikasi</TableHead>
-                          <TableHead className="w-20"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredEntries.map((e) => (
-                          <TableRow key={e.id}>
+                <>
+                  {/* Desktop Table */}
+                  <Card className="hidden md:block">
+                    <CardContent className="p-0 overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
                             {(canDownload || canChangeStatus) && (
-                              <TableCell onClick={(ev) => ev.stopPropagation()}>
+                              <TableHead className="w-10">
                                 <Checkbox
-                                  checked={selectedEntries.has(e.id)}
-                                  onCheckedChange={() => toggleEntry(e.id)}
+                                  checked={selectedEntries.size === entries.length && entries.length > 0}
+                                  onCheckedChange={toggleAll}
                                 />
-                              </TableCell>
+                              </TableHead>
                             )}
-                            <TableCell className="font-medium cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nama || "-"}</TableCell>
-                            <TableCell>
-                              {canChangeStatus ? (
-                                <Select
-                                  value={(e as any).status || "belum_lengkap"}
-                                  onValueChange={(v) => handleStatusChange(e.id, v)}
-                                >
-                                  <SelectTrigger className="h-8 w-[170px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {/* Always show current status */}
-                                    {(() => {
-                                      const currentStatus = (e as any).status || "belum_lengkap";
-                                      const statusesToShow = new Set([currentStatus, ...allowedStatuses]);
-                                      return [...statusesToShow].map((key) => {
-                                        const cfg = STATUS_CONFIG[key];
-                                        if (!cfg) return null;
-                                        return (
-                                          <SelectItem key={key} value={key}>
-                                            <span className="flex items-center gap-1">
-                                              <cfg.icon className="h-3 w-3" />
-                                              {cfg.label}
-                                            </span>
-                                          </SelectItem>
-                                        );
-                                      });
-                                    })()}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                (() => {
-                                  const cfg = STATUS_CONFIG[(e as any).status || "belum_lengkap"];
-                                  if (!cfg) return <Badge variant="outline">{(e as any).status}</Badge>;
-                                  return <Badge variant={cfg.variant}><cfg.icon className="mr-1 h-3 w-3" />{cfg.label}</Badge>;
-                                })()
-                              )}
-                            </TableCell>
-                            <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>
-                            <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>
-                            <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{e.alamat || "-"}</TableCell>
-                            <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
-                            <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
-                            <TableCell>{e.nib_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
-                            <TableCell>{(e as any).sertifikat_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
-                            <TableCell>
-                              <code className="text-xs font-mono text-muted-foreground">{(e as any).tracking_code || "-"}</code>
-                            </TableCell>
-                            <TableCell>
-                              {((photoCounts[e.id]?.produk || 0) > 0 || e.foto_produk_url) ? (
-                                <PhotoGallery
-                                  entryId={e.id}
-                                  legacyProdukUrl={e.foto_produk_url}
-                                  legacyVerifikasiUrl={e.foto_verifikasi_url}
-                                  photoType="produk"
-                                  trigger={<Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">{photoCounts[e.id]?.produk || 1} foto</Badge>}
-                                />
-                              ) : "-"}
-                            </TableCell>
-                            <TableCell>
-                              {((photoCounts[e.id]?.verifikasi || 0) > 0 || e.foto_verifikasi_url) ? (
-                                <PhotoGallery
-                                  entryId={e.id}
-                                  legacyProdukUrl={e.foto_produk_url}
-                                  legacyVerifikasiUrl={e.foto_verifikasi_url}
-                                  photoType="verifikasi"
-                                  trigger={<Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">{photoCounts[e.id]?.verifikasi || 1} foto</Badge>}
-                                />
-                              ) : "-"}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                {(role === "super_admin" || role === "admin") && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                      setLinkUmkmEntryId(e.id);
-                                      setSelectedUmkmUserId((e as any).umkm_user_id || "");
-                                      setLinkUmkmOpen(true);
-                                      fetchUmkmUsers();
-                                    }}
-                                    title="Hubungkan ke akun UMKM"
-                                  >
-                                    <Link2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                {canDownload && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleDownload([e.id])}
-                                    disabled={downloading}
-                                    title="Download entri ini"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Hapus Entri</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Yakin ingin menghapus data "{e.nama || "ini"}"? Tindakan ini tidak bisa dibatalkan.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Batal</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDeleteEntry(e.id)}>Hapus</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-                            </TableCell>
+                            <TableHead>Nama</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Kata Sandi</TableHead>
+                            <TableHead>Alamat</TableHead>
+                            <TableHead>No HP</TableHead>
+                            <TableHead>KTP</TableHead>
+                            <TableHead>NIB</TableHead>
+                            <TableHead>Sertifikat</TableHead>
+                            <TableHead>Tracking</TableHead>
+                            <TableHead>Produk</TableHead>
+                            <TableHead>Verifikasi</TableHead>
+                            <TableHead className="w-20"></TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredEntries.map((e) => (
+                            <TableRow key={e.id}>
+                              {(canDownload || canChangeStatus) && (
+                                <TableCell onClick={(ev) => ev.stopPropagation()}>
+                                  <Checkbox
+                                    checked={selectedEntries.has(e.id)}
+                                    onCheckedChange={() => toggleEntry(e.id)}
+                                  />
+                                </TableCell>
+                              )}
+                              <TableCell className="font-medium cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nama || "-"}</TableCell>
+                              <TableCell>
+                                {canChangeStatus ? (
+                                  <Select
+                                    value={(e as any).status || "belum_lengkap"}
+                                    onValueChange={(v) => handleStatusChange(e.id, v)}
+                                  >
+                                    <SelectTrigger className="h-8 w-[170px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(() => {
+                                        const currentStatus = (e as any).status || "belum_lengkap";
+                                        const statusesToShow = new Set([currentStatus, ...allowedStatuses]);
+                                        return [...statusesToShow].map((key) => {
+                                          const cfg = STATUS_CONFIG[key];
+                                          if (!cfg) return null;
+                                          return (
+                                            <SelectItem key={key} value={key}>
+                                              <span className="flex items-center gap-1">
+                                                <cfg.icon className="h-3 w-3" />
+                                                {cfg.label}
+                                              </span>
+                                            </SelectItem>
+                                          );
+                                        });
+                                      })()}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  (() => {
+                                    const cfg = STATUS_CONFIG[(e as any).status || "belum_lengkap"];
+                                    if (!cfg) return <Badge variant="outline">{(e as any).status}</Badge>;
+                                    return <Badge variant={cfg.variant}><cfg.icon className="mr-1 h-3 w-3" />{cfg.label}</Badge>;
+                                  })()
+                                )}
+                              </TableCell>
+                              <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).email || "-"}</TableCell>
+                              <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{(e as any).kata_sandi || "-"}</TableCell>
+                              <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{e.alamat || "-"}</TableCell>
+                              <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
+                              <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
+                              <TableCell>{e.nib_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
+                              <TableCell>{(e as any).sertifikat_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
+                              <TableCell>
+                                <code className="text-xs font-mono text-muted-foreground">{(e as any).tracking_code || "-"}</code>
+                              </TableCell>
+                              <TableCell>
+                                {((photoCounts[e.id]?.produk || 0) > 0 || e.foto_produk_url) ? (
+                                  <PhotoGallery
+                                    entryId={e.id}
+                                    legacyProdukUrl={e.foto_produk_url}
+                                    legacyVerifikasiUrl={e.foto_verifikasi_url}
+                                    photoType="produk"
+                                    trigger={<Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">{photoCounts[e.id]?.produk || 1} foto</Badge>}
+                                  />
+                                ) : "-"}
+                              </TableCell>
+                              <TableCell>
+                                {((photoCounts[e.id]?.verifikasi || 0) > 0 || e.foto_verifikasi_url) ? (
+                                  <PhotoGallery
+                                    entryId={e.id}
+                                    legacyProdukUrl={e.foto_produk_url}
+                                    legacyVerifikasiUrl={e.foto_verifikasi_url}
+                                    photoType="verifikasi"
+                                    trigger={<Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">{photoCounts[e.id]?.verifikasi || 1} foto</Badge>}
+                                  />
+                                ) : "-"}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  {(role === "super_admin" || role === "admin") && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        setLinkUmkmEntryId(e.id);
+                                        setSelectedUmkmUserId((e as any).umkm_user_id || "");
+                                        setLinkUmkmOpen(true);
+                                        fetchUmkmUsers();
+                                      }}
+                                      title="Hubungkan ke akun UMKM"
+                                    >
+                                      <Link2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {canDownload && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDownload([e.id])}
+                                      disabled={downloading}
+                                      title="Download entri ini"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Hapus Entri</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Yakin ingin menghapus data "{e.nama || "ini"}"? Tindakan ini tidak bisa dibatalkan.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteEntry(e.id)}>Hapus</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+
+                  {/* Mobile Cards */}
+                  <div className="md:hidden space-y-3">
+                    {filteredEntries.map((e) => (
+                      <EntryMobileCard
+                        key={e.id}
+                        entry={e}
+                        photoCounts={photoCounts[e.id]}
+                        canDownload={canDownload}
+                        canChangeStatus={canChangeStatus}
+                        allowedStatuses={allowedStatuses}
+                        downloading={downloading}
+                        selected={selectedEntries.has(e.id)}
+                        showCheckbox={canDownload || canChangeStatus}
+                        role={role}
+                        onToggleSelect={() => toggleEntry(e.id)}
+                        onEdit={() => setEditingEntry(e)}
+                        onStatusChange={(v) => handleStatusChange(e.id, v)}
+                        onDownload={() => handleDownload([e.id])}
+                        onDelete={() => handleDeleteEntry(e.id)}
+                        onLinkUmkm={() => {
+                          setLinkUmkmEntryId(e.id);
+                          setSelectedUmkmUserId((e as any).umkm_user_id || "");
+                          setLinkUmkmOpen(true);
+                          fetchUmkmUsers();
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}
@@ -762,7 +794,8 @@ export default function GroupDetail() {
                 </Dialog>
               </div>
             )}
-            <Card>
+            {/* Desktop Table */}
+            <Card className="hidden md:block">
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
@@ -801,6 +834,32 @@ export default function GroupDetail() {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3">
+              {members.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">Belum ada anggota</CardContent>
+                </Card>
+              ) : members.map((m) => (
+                <Card key={m.id}>
+                  <CardContent className="p-4 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{m.full_name || "-"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline" className="text-xs">{m.role?.replace("_", " ") ?? "-"}</Badge>
+                      {role === "super_admin" && (
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(m.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
         )}
 
@@ -827,60 +886,101 @@ export default function GroupDetail() {
                     Belum ada perubahan status yang tercatat
                   </div>
                 ) : (
-                  <ScrollArea className="h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nama Peserta</TableHead>
-                          <TableHead>Perubahan Status</TableHead>
-                          <TableHead>Diubah Oleh</TableHead>
-                          <TableHead>Waktu</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {auditLogs.map((log) => {
-                          const oldCfg = log.old_status ? STATUS_CONFIG[log.old_status] : null;
-                          const newCfg = STATUS_CONFIG[log.new_status];
-                          return (
-                            <TableRow key={log.id}>
-                              <TableCell className="font-medium">{log.entry_name || "-"}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {oldCfg ? (
-                                    <Badge variant={oldCfg.variant} className="text-xs">
-                                      <oldCfg.icon className="mr-1 h-3 w-3" />
-                                      {oldCfg.label}
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="text-xs">—</Badge>
-                                  )}
-                                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                                  {newCfg ? (
-                                    <Badge variant={newCfg.variant} className="text-xs">
-                                      <newCfg.icon className="mr-1 h-3 w-3" />
-                                      {newCfg.label}
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="text-xs">{log.new_status}</Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">{log.changer_name ?? "—"}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                  <>
+                    {/* Desktop Table */}
+                    <ScrollArea className="h-[500px] hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nama Peserta</TableHead>
+                            <TableHead>Perubahan Status</TableHead>
+                            <TableHead>Diubah Oleh</TableHead>
+                            <TableHead>Waktu</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {auditLogs.map((log) => {
+                            const oldCfg = log.old_status ? STATUS_CONFIG[log.old_status] : null;
+                            const newCfg = STATUS_CONFIG[log.new_status];
+                            return (
+                              <TableRow key={log.id}>
+                                <TableCell className="font-medium">{log.entry_name || "-"}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {oldCfg ? (
+                                      <Badge variant={oldCfg.variant} className="text-xs">
+                                        <oldCfg.icon className="mr-1 h-3 w-3" />
+                                        {oldCfg.label}
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-xs">—</Badge>
+                                    )}
+                                    <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    {newCfg ? (
+                                      <Badge variant={newCfg.variant} className="text-xs">
+                                        <newCfg.icon className="mr-1 h-3 w-3" />
+                                        {newCfg.label}
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-xs">{log.new_status}</Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{log.changer_name ?? "—"}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                  {new Date(log.changed_at).toLocaleString("id-ID", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+
+                    {/* Mobile Cards */}
+                    <div className="md:hidden divide-y max-h-[500px] overflow-auto">
+                      {auditLogs.map((log) => {
+                        const oldCfg = log.old_status ? STATUS_CONFIG[log.old_status] : null;
+                        const newCfg = STATUS_CONFIG[log.new_status];
+                        return (
+                          <div key={log.id} className="p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm">{log.entry_name || "-"}</span>
+                              <span className="text-xs text-muted-foreground">
                                 {new Date(log.changed_at).toLocaleString("id-ID", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
+                                  day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
                                 })}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {oldCfg ? (
+                                <Badge variant={oldCfg.variant} className="text-xs">
+                                  <oldCfg.icon className="mr-1 h-3 w-3" />{oldCfg.label}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">—</Badge>
+                              )}
+                              <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                              {newCfg ? (
+                                <Badge variant={newCfg.variant} className="text-xs">
+                                  <newCfg.icon className="mr-1 h-3 w-3" />{newCfg.label}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">{log.new_status}</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">oleh {log.changer_name ?? "—"}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
