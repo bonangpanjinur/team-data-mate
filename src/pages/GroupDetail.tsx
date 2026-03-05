@@ -886,60 +886,101 @@ export default function GroupDetail() {
                     Belum ada perubahan status yang tercatat
                   </div>
                 ) : (
-                  <ScrollArea className="h-[500px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nama Peserta</TableHead>
-                          <TableHead>Perubahan Status</TableHead>
-                          <TableHead>Diubah Oleh</TableHead>
-                          <TableHead>Waktu</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {auditLogs.map((log) => {
-                          const oldCfg = log.old_status ? STATUS_CONFIG[log.old_status] : null;
-                          const newCfg = STATUS_CONFIG[log.new_status];
-                          return (
-                            <TableRow key={log.id}>
-                              <TableCell className="font-medium">{log.entry_name || "-"}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {oldCfg ? (
-                                    <Badge variant={oldCfg.variant} className="text-xs">
-                                      <oldCfg.icon className="mr-1 h-3 w-3" />
-                                      {oldCfg.label}
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="text-xs">—</Badge>
-                                  )}
-                                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                                  {newCfg ? (
-                                    <Badge variant={newCfg.variant} className="text-xs">
-                                      <newCfg.icon className="mr-1 h-3 w-3" />
-                                      {newCfg.label}
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="text-xs">{log.new_status}</Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">{log.changer_name ?? "—"}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                  <>
+                    {/* Desktop Table */}
+                    <ScrollArea className="h-[500px] hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nama Peserta</TableHead>
+                            <TableHead>Perubahan Status</TableHead>
+                            <TableHead>Diubah Oleh</TableHead>
+                            <TableHead>Waktu</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {auditLogs.map((log) => {
+                            const oldCfg = log.old_status ? STATUS_CONFIG[log.old_status] : null;
+                            const newCfg = STATUS_CONFIG[log.new_status];
+                            return (
+                              <TableRow key={log.id}>
+                                <TableCell className="font-medium">{log.entry_name || "-"}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {oldCfg ? (
+                                      <Badge variant={oldCfg.variant} className="text-xs">
+                                        <oldCfg.icon className="mr-1 h-3 w-3" />
+                                        {oldCfg.label}
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-xs">—</Badge>
+                                    )}
+                                    <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    {newCfg ? (
+                                      <Badge variant={newCfg.variant} className="text-xs">
+                                        <newCfg.icon className="mr-1 h-3 w-3" />
+                                        {newCfg.label}
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-xs">{log.new_status}</Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{log.changer_name ?? "—"}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                  {new Date(log.changed_at).toLocaleString("id-ID", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+
+                    {/* Mobile Cards */}
+                    <div className="md:hidden divide-y max-h-[500px] overflow-auto">
+                      {auditLogs.map((log) => {
+                        const oldCfg = log.old_status ? STATUS_CONFIG[log.old_status] : null;
+                        const newCfg = STATUS_CONFIG[log.new_status];
+                        return (
+                          <div key={log.id} className="p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm">{log.entry_name || "-"}</span>
+                              <span className="text-xs text-muted-foreground">
                                 {new Date(log.changed_at).toLocaleString("id-ID", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
+                                  day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
                                 })}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {oldCfg ? (
+                                <Badge variant={oldCfg.variant} className="text-xs">
+                                  <oldCfg.icon className="mr-1 h-3 w-3" />{oldCfg.label}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">—</Badge>
+                              )}
+                              <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                              {newCfg ? (
+                                <Badge variant={newCfg.variant} className="text-xs">
+                                  <newCfg.icon className="mr-1 h-3 w-3" />{newCfg.label}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">{log.new_status}</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">oleh {log.changer_name ?? "—"}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
