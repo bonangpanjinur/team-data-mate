@@ -794,7 +794,8 @@ export default function GroupDetail() {
                 </Dialog>
               </div>
             )}
-            <Card>
+            {/* Desktop Table */}
+            <Card className="hidden md:block">
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
@@ -833,6 +834,32 @@ export default function GroupDetail() {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3">
+              {members.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground">Belum ada anggota</CardContent>
+                </Card>
+              ) : members.map((m) => (
+                <Card key={m.id}>
+                  <CardContent className="p-4 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{m.full_name || "-"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline" className="text-xs">{m.role?.replace("_", " ") ?? "-"}</Badge>
+                      {role === "super_admin" && (
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(m.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
         )}
 
