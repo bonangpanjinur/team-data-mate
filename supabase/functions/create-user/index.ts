@@ -54,6 +54,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: createError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Create profile explicitly
+    await supabaseAdmin
+      .from("profiles")
+      .upsert({ id: newUser.user.id, email, full_name, updated_at: new Date().toISOString() });
+
     // Assign role
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
