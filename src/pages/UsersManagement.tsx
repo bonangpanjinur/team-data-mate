@@ -216,64 +216,100 @@ export default function UsersManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users
-                .filter((u) => {
+              {(() => {
+                const filtered = users.filter((u) => {
                   const q = searchQuery.toLowerCase();
                   const matchSearch = !q || (u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
                   const matchRole = filterRole === "all" || u.role === filterRole;
                   return matchSearch && matchRole;
-                })
-                .map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.full_name || "-"}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={roleBadgeVariant(u.role)}>
-                      {u.role?.replace("_", " ") ?? "No role"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {u.role !== "super_admin" && (
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setEditRole(u.role || "lapangan"); }}>
-                          <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { setResetUser(u); setResetPassword(""); }}>
-                          <KeyRound className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus User</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                });
+                const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+                const safePage = Math.min(currentPage, totalPages);
+                const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+                return (
+                  <>
+                    {paginated.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell className="font-medium">{u.full_name || "-"}</TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={roleBadgeVariant(u.role)}>
+                            {u.role?.replace("_", " ") ?? "No role"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {u.role !== "super_admin" && (
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setEditRole(u.role || "lapangan"); }}>
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setResetUser(u); setResetPassword(""); }}>
+                                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus User</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filtered.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          {searchQuery || filterRole !== "all" ? "Tidak ada user yang cocok" : "Belum ada user"}
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {users.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    Belum ada user
-                  </TableCell>
-                </TableRow>
-              )}
+                  </>
+                );
+              })()}
             </TableBody>
           </Table>
+          {/* Pagination */}
+          {(() => {
+            const filtered = users.filter((u) => {
+              const q = searchQuery.toLowerCase();
+              const matchSearch = !q || (u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
+              const matchRole = filterRole === "all" || u.role === filterRole;
+              return matchSearch && matchRole;
+            });
+            const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+            if (totalPages <= 1) return null;
+            const safePage = Math.min(currentPage, totalPages);
+            return (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <span className="text-sm text-muted-foreground">
+                  {filtered.length} user · Halaman {safePage} dari {totalPages}
+                </span>
+                <div className="flex gap-1">
+                  <Button variant="outline" size="icon" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
