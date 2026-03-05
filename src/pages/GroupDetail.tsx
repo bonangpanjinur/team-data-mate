@@ -85,6 +85,10 @@ export default function GroupDetail() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
   const canDownload = role === "super_admin" || role === "admin" || role === "admin_input";
 
   // Role-based allowed status changes
