@@ -110,6 +110,10 @@ export default function GroupDetail() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedEntries = filteredEntries.slice((safePage - 1) * pageSize, safePage * pageSize);
+
   const fetchGroup = async () => {
     if (!groupId) return;
     const { data } = await supabase.from("groups").select("*").eq("id", groupId).single();
