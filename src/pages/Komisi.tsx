@@ -288,69 +288,97 @@ export default function Komisi() {
         <CardHeader>
           <CardTitle className="text-base">Riwayat Komisi</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Jumlah</TableHead>
-                <TableHead>Periode</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Tanggal Cair</TableHead>
-                 {isAdmin && <TableHead className="w-20">Aksi</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+        <CardContent className="p-0 overflow-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                   <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">
-                     Memuat...
-                   </TableCell>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Jumlah</TableHead>
+                  <TableHead>Periode</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Tanggal Cair</TableHead>
+                   {isAdmin && <TableHead className="w-20">Aksi</TableHead>}
                 </TableRow>
-              ) : commissions.length === 0 ? (
-                <TableRow>
-                   <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">
-                     Belum ada komisi{selectedPeriod !== "all" ? ` untuk periode ${selectedPeriod}` : ""}
-                   </TableCell>
-                </TableRow>
-              ) : (
-                commissions.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.entry_name}</TableCell>
-                    <TableCell className="font-mono">{formatRp(c.amount)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{c.period || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={c.status === "paid" ? "default" : "secondary"}>
-                        {c.status === "paid" ? "Cair" : "Pending"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                       {new Date(c.created_at).toLocaleDateString("id-ID")}
-                     </TableCell>
-                     <TableCell className="text-sm text-muted-foreground">
-                       {c.status === "paid" && c.paid_at
-                         ? new Date(c.paid_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
-                         : "-"}
-                     </TableCell>
-                     {isAdmin && (
-                      <TableCell>
-                        {c.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleMarkPaid([c.id])}
-                          >
-                            Cairkan
-                          </Button>
-                        )}
-                      </TableCell>
-                    )}
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                     <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">Memuat...</TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : commissions.length === 0 ? (
+                  <TableRow>
+                     <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                       Belum ada komisi{selectedPeriod !== "all" ? ` untuk periode ${selectedPeriod}` : ""}
+                     </TableCell>
+                  </TableRow>
+                ) : (
+                  commissions.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.entry_name}</TableCell>
+                      <TableCell className="font-mono">{formatRp(c.amount)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{c.period || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={c.status === "paid" ? "default" : "secondary"}>
+                          {c.status === "paid" ? "Cair" : "Pending"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                         {new Date(c.created_at).toLocaleDateString("id-ID")}
+                       </TableCell>
+                       <TableCell className="text-sm text-muted-foreground">
+                         {c.status === "paid" && c.paid_at
+                           ? new Date(c.paid_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                           : "-"}
+                       </TableCell>
+                       {isAdmin && (
+                        <TableCell>
+                          {c.status === "pending" && (
+                            <Button variant="ghost" size="sm" onClick={() => handleMarkPaid([c.id])}>Cairkan</Button>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y">
+            {loading ? (
+              <p className="text-center py-8 text-muted-foreground">Memuat...</p>
+            ) : commissions.length === 0 ? (
+              <p className="text-center py-8 text-muted-foreground">
+                Belum ada komisi{selectedPeriod !== "all" ? ` untuk periode ${selectedPeriod}` : ""}
+              </p>
+            ) : commissions.map((c) => (
+              <div key={c.id} className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{c.entry_name}</span>
+                  <Badge variant={c.status === "paid" ? "default" : "secondary"}>
+                    {c.status === "paid" ? "Cair" : "Pending"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-sm font-bold">{formatRp(c.amount)}</span>
+                  <span className="text-xs text-muted-foreground">{c.period || "-"}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{new Date(c.created_at).toLocaleDateString("id-ID")}</span>
+                  {c.status === "paid" && c.paid_at && (
+                    <span>Cair: {new Date(c.paid_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
+                  )}
+                </div>
+                {isAdmin && c.status === "pending" && (
+                  <Button variant="outline" size="sm" className="w-full mt-1" onClick={() => handleMarkPaid([c.id])}>Cairkan</Button>
+                )}
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

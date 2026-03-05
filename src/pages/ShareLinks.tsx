@@ -126,8 +126,9 @@ export default function ShareLinks() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
+      {/* Desktop Table */}
+      <Card className="hidden md:block">
+        <CardContent className="p-0 overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -189,6 +190,40 @@ export default function ShareLinks() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {links.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">Belum ada link</CardContent>
+          </Card>
+        ) : links.map((l) => (
+          <Card key={l.id}>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm">{l.group_name}</span>
+                <Badge
+                  variant={l.is_active ? "default" : "secondary"}
+                  className="cursor-pointer"
+                  onClick={() => toggleActive(l)}
+                >
+                  {l.is_active ? "Aktif" : "Nonaktif"}
+                </Badge>
+              </div>
+              <code className="block rounded bg-muted px-2 py-1 text-xs font-mono truncate">/f/{l.slug || "..."}</code>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{l.entry_count ?? 0} data masuk</span>
+                <span>{new Date(l.created_at).toLocaleDateString("id-ID")}</span>
+              </div>
+              <div className="flex gap-1 border-t pt-2">
+                <Button variant="ghost" size="sm" onClick={() => copyLink(l)}><Copy className="mr-1 h-3 w-3" /> Salin</Button>
+                <Button variant="ghost" size="sm" onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getShareUrl(l))}`, "_blank")}><QrCode className="mr-1 h-3 w-3" /> QR</Button>
+                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(l.id)}><Trash2 className="mr-1 h-3 w-3" /> Hapus</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
