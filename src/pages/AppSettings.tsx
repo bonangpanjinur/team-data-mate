@@ -220,18 +220,18 @@ export default function AppSettings() {
       <h1 className="text-2xl font-bold">Pengaturan</h1>
 
       <Tabs defaultValue="tampilan">
-        <TabsList className="w-full flex-wrap">
-          <TabsTrigger value="tampilan" className="flex-1 gap-2">
-            <Palette className="h-4 w-4" /> Tampilan
+        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="tampilan" className="gap-1 text-xs sm:text-sm">
+            <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tampilan</span><span className="sm:hidden">UI</span>
           </TabsTrigger>
-          <TabsTrigger value="akses" className="flex-1 gap-2">
-            <ShieldCheck className="h-4 w-4" /> Hak Akses
+          <TabsTrigger value="akses" className="gap-1 text-xs sm:text-sm">
+            <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Akses
           </TabsTrigger>
-          <TabsTrigger value="siap_input" className="flex-1 gap-2">
-            <ClipboardCheck className="h-4 w-4" /> Siap Input
+          <TabsTrigger value="siap_input" className="gap-1 text-xs sm:text-sm">
+            <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Siap Input</span><span className="sm:hidden">Input</span>
           </TabsTrigger>
-          <TabsTrigger value="komisi" className="flex-1 gap-2">
-            <Wallet className="h-4 w-4" /> Komisi
+          <TabsTrigger value="komisi" className="gap-1 text-xs sm:text-sm">
+            <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Komisi
           </TabsTrigger>
         </TabsList>
 
