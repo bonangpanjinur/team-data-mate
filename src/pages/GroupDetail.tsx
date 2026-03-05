@@ -602,7 +602,7 @@ export default function GroupDetail() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredEntries.map((e) => (
+                          {paginatedEntries.map((e) => (
                             <TableRow key={e.id}>
                               {(canDownload || canChangeStatus) && (
                                 <TableCell onClick={(ev) => ev.stopPropagation()}>
