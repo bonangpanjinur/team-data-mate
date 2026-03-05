@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
@@ -84,6 +85,10 @@ export default function GroupDetail() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
   const canDownload = role === "super_admin" || role === "admin" || role === "admin_input";
 
   // Role-based allowed status changes
@@ -104,6 +109,10 @@ export default function GroupDetail() {
     const matchesStatus = statusFilter === "all" || e.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedEntries = filteredEntries.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const fetchGroup = async () => {
     if (!groupId) return;
@@ -530,11 +539,11 @@ export default function GroupDetail() {
                     <Input
                       placeholder="Cari nama atau alamat..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                       className="pl-9"
                     />
                   </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter} disabled={isAdminInput}>
+                  <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} disabled={isAdminInput}>
                     <SelectTrigger className="w-[180px]">
                       <Filter className="mr-2 h-4 w-4" />
                       <SelectValue placeholder="Filter status" />
@@ -593,7 +602,7 @@ export default function GroupDetail() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredEntries.map((e) => (
+                          {paginatedEntries.map((e) => (
                             <TableRow key={e.id}>
                               {(canDownload || canChangeStatus) && (
                                 <TableCell onClick={(ev) => ev.stopPropagation()}>
@@ -730,7 +739,7 @@ export default function GroupDetail() {
 
                   {/* Mobile Cards */}
                   <div className="md:hidden space-y-3">
-                    {filteredEntries.map((e) => (
+                    {paginatedEntries.map((e) => (
                       <EntryMobileCard
                         key={e.id}
                         entry={e}
@@ -756,6 +765,22 @@ export default function GroupDetail() {
                       />
                     ))}
                   </div>
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        {filteredEntries.length} data · Hal {safePage}/{totalPages}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="icon" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </>
