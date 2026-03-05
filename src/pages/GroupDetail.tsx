@@ -539,7 +539,7 @@ export default function GroupDetail() {
                     <Input
                       placeholder="Cari nama atau alamat..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                       className="pl-9"
                     />
                   </div>
