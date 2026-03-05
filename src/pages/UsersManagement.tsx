@@ -71,15 +71,19 @@ export default function UsersManagement() {
     setCreating(false);
 
     if (error || data?.error) {
-      toast({ title: "Gagal membuat user", description: error?.message || data?.error, variant: "destructive" });
+      const msg = error?.message || data?.error;
+      const isAlreadyRegistered = msg?.toLowerCase().includes("already been registered");
+      toast({
+        title: isAlreadyRegistered ? "Email sudah terdaftar" : "Gagal membuat user",
+        description: isAlreadyRegistered ? "User dengan email ini sudah ada. Coba gunakan email lain." : msg,
+        variant: "destructive",
+      });
     } else {
       toast({ title: "User berhasil dibuat" });
       setOpen(false);
       setNewEmail("");
       setNewName("");
       setNewPassword("");
-      // Delay to allow DB trigger to create profile
-      await new Promise((r) => setTimeout(r, 800));
       fetchUsers();
     }
   };
