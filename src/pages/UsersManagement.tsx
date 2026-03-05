@@ -63,28 +63,45 @@ export default function UsersManagement() {
     e.preventDefault();
     setCreating(true);
 
-    // Use edge function to create user (super admin creates accounts)
-    const { data, error } = await supabase.functions.invoke("create-user", {
-      body: { email: newEmail, password: newPassword, full_name: newName, role: newRole },
-    });
-
-    setCreating(false);
-
-    if (error || data?.error) {
-      const msg = error?.message || data?.error;
-      const isAlreadyRegistered = msg?.toLowerCase().includes("already been registered");
-      toast({
-        title: isAlreadyRegistered ? "Email sudah terdaftar" : "Gagal membuat user",
-        description: isAlreadyRegistered ? "User dengan email ini sudah ada. Coba gunakan email lain." : msg,
-        variant: "destructive",
+    try {
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: { email: newEmail, password: newPassword, full_name: newName, role: newRole },
       });
-    } else {
-      toast({ title: "User berhasil dibuat" });
-      setOpen(false);
-      setNewEmail("");
-      setNewName("");
-      setNewPassword("");
-      fetchUsers();
+
+      setCreating(false);
+
+      // Extract error message from various possible locations
+      let errorMsg: string | null = null;
+      if (error) {
+        // Try to get the response body from the edge function error context
+        try {
+          const ctx = await (error as any).context?.json?.();
+          errorMsg = ctx?.error || error.message;
+        } catch {
+          errorMsg = error.message;
+        }
+      } else if (data?.error) {
+        errorMsg = data.error;
+      }
+
+      if (errorMsg) {
+        const isAlreadyRegistered = errorMsg.toLowerCase().includes("already") && errorMsg.toLowerCase().includes("registered");
+        toast({
+          title: isAlreadyRegistered ? "Email sudah terdaftar" : "Gagal membuat user",
+          description: isAlreadyRegistered ? "User dengan email ini sudah ada. Coba gunakan email lain." : errorMsg,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "User berhasil dibuat" });
+        setOpen(false);
+        setNewEmail("");
+        setNewName("");
+        setNewPassword("");
+        fetchUsers();
+      }
+    } catch (err: any) {
+      setCreating(false);
+      toast({ title: "Gagal membuat user", description: err.message, variant: "destructive" });
     }
   };
 
