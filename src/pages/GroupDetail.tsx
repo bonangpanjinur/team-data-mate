@@ -739,7 +739,7 @@ export default function GroupDetail() {
 
                   {/* Mobile Cards */}
                   <div className="md:hidden space-y-3">
-                    {filteredEntries.map((e) => (
+                    {paginatedEntries.map((e) => (
                       <EntryMobileCard
                         key={e.id}
                         entry={e}
