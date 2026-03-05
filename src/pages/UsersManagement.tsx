@@ -191,9 +191,9 @@ export default function UsersManagement() {
           <div className="flex flex-col sm:flex-row gap-3 p-4 border-b">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari nama atau email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+              <Input placeholder="Cari nama atau email..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="pl-9" />
             </div>
-            <Select value={filterRole} onValueChange={setFilterRole}>
+            <Select value={filterRole} onValueChange={(v) => { setFilterRole(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Semua Role" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Role</SelectItem>
