@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Pencil, KeyRound, Search } from "lucide-react";
+import { Plus, Trash2, Pencil, KeyRound, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -38,6 +38,8 @@ export default function UsersManagement() {
   const [resettingPassword, setResettingPassword] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from("profiles").select("*");
@@ -189,9 +191,9 @@ export default function UsersManagement() {
           <div className="flex flex-col sm:flex-row gap-3 p-4 border-b">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari nama atau email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+              <Input placeholder="Cari nama atau email..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="pl-9" />
             </div>
-            <Select value={filterRole} onValueChange={setFilterRole}>
+            <Select value={filterRole} onValueChange={(v) => { setFilterRole(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Semua Role" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Role</SelectItem>
@@ -214,64 +216,100 @@ export default function UsersManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users
-                .filter((u) => {
+              {(() => {
+                const filtered = users.filter((u) => {
                   const q = searchQuery.toLowerCase();
                   const matchSearch = !q || (u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
                   const matchRole = filterRole === "all" || u.role === filterRole;
                   return matchSearch && matchRole;
-                })
-                .map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.full_name || "-"}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={roleBadgeVariant(u.role)}>
-                      {u.role?.replace("_", " ") ?? "No role"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {u.role !== "super_admin" && (
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setEditRole(u.role || "lapangan"); }}>
-                          <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { setResetUser(u); setResetPassword(""); }}>
-                          <KeyRound className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus User</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                });
+                const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+                const safePage = Math.min(currentPage, totalPages);
+                const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+                return (
+                  <>
+                    {paginated.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell className="font-medium">{u.full_name || "-"}</TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={roleBadgeVariant(u.role)}>
+                            {u.role?.replace("_", " ") ?? "No role"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {u.role !== "super_admin" && (
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setEditRole(u.role || "lapangan"); }}>
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setResetUser(u); setResetPassword(""); }}>
+                                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Hapus User</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Yakin ingin menghapus {u.full_name || u.email}? Tindakan ini tidak bisa dibatalkan.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(u.id)}>Hapus</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filtered.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          {searchQuery || filterRole !== "all" ? "Tidak ada user yang cocok" : "Belum ada user"}
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {users.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    Belum ada user
-                  </TableCell>
-                </TableRow>
-              )}
+                  </>
+                );
+              })()}
             </TableBody>
           </Table>
+          {/* Pagination */}
+          {(() => {
+            const filtered = users.filter((u) => {
+              const q = searchQuery.toLowerCase();
+              const matchSearch = !q || (u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
+              const matchRole = filterRole === "all" || u.role === filterRole;
+              return matchSearch && matchRole;
+            });
+            const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+            if (totalPages <= 1) return null;
+            const safePage = Math.min(currentPage, totalPages);
+            return (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <span className="text-sm text-muted-foreground">
+                  {filtered.length} user · Halaman {safePage} dari {totalPages}
+                </span>
+                <div className="flex gap-1">
+                  <Button variant="outline" size="icon" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
