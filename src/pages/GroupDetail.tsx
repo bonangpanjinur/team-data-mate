@@ -543,7 +543,7 @@ export default function GroupDetail() {
                       className="pl-9"
                     />
                   </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter} disabled={isAdminInput}>
+                  <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} disabled={isAdminInput}>
                     <SelectTrigger className="w-[180px]">
                       <Filter className="mr-2 h-4 w-4" />
                       <SelectValue placeholder="Filter status" />
