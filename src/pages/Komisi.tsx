@@ -101,7 +101,7 @@ export default function Komisi() {
 
   useEffect(() => {
     fetchCommissions();
-    if (isAdmin) fetchUsers();
+    if (isAdmin || isOwner) fetchUsers();
   }, [user, selectedUser, selectedPeriod]);
 
   const totalEarned = commissions.reduce((sum, c) => sum + c.amount, 0);
