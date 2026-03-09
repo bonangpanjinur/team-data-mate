@@ -21,6 +21,9 @@ import Komisi from "@/pages/Komisi";
 import UmkmDashboard from "@/pages/UmkmDashboard";
 import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
+import OwnerInvoices from "@/pages/OwnerInvoices";
+import OwnerCommissionRates from "@/pages/OwnerCommissionRates";
+import FinancialReport from "@/pages/FinancialReport";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
