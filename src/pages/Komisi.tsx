@@ -180,7 +180,7 @@ export default function Komisi() {
             </SelectContent>
           </Select>
 
-          {isAdmin && (
+          {(isAdmin || isOwner) && (
             <Select value={selectedUser} onValueChange={setSelectedUser}>
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Lihat komisi user..." />
@@ -195,7 +195,7 @@ export default function Komisi() {
               </SelectContent>
             </Select>
           )}
-          {isAdmin && (
+          {(isAdmin || isOwner) && (
             <Button variant="outline" size="sm" onClick={exportCSV}>
               <Download className="mr-2 h-4 w-4" />
               Export CSV

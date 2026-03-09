@@ -485,6 +485,55 @@ export default function AppSettings() {
             Simpan Tarif Komisi
           </Button>
         </TabsContent>
+
+        <TabsContent value="tarif" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5" /> Tarif per Sertifikat
+              </CardTitle>
+              <CardDescription>
+                Biaya yang ditagihkan ke Owner setiap kali sertifikat halal selesai diproses
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <span className="text-sm font-medium">Biaya per Sertifikat Selesai</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Rp</span>
+                  <Input
+                    type="number"
+                    value={certFee}
+                    onChange={e => setCertFee(parseInt(e.target.value) || 0)}
+                    className="w-40 text-right font-mono"
+                    min={0}
+                    step={10000}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tagihan akan otomatis dibuat untuk Owner ketika status entry berubah ke "Sertifikat Selesai"
+              </p>
+            </CardContent>
+          </Card>
+
+          <Button
+            onClick={async () => {
+              setSavingFee(true);
+              await (supabase as any)
+                .from("certificate_fees")
+                .update({ amount: certFee, updated_at: new Date().toISOString() })
+                .neq("id", "00000000-0000-0000-0000-000000000000");
+              setSavingFee(false);
+              toast({ title: "Tarif sertifikat berhasil disimpan" });
+            }}
+            disabled={savingFee}
+            className="w-full gap-2"
+          >
+            {savingFee ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Simpan Tarif Sertifikat
+          </Button>
+        </TabsContent>
       </Tabs>
     </div>
   );
