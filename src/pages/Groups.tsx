@@ -119,7 +119,7 @@ export default function Groups() {
                   <FolderOpen className="h-4 w-4 text-primary" />
                   {g.name}
                 </CardTitle>
-                {role === "super_admin" && (
+                {canDeleteGroup && (role === "super_admin" || g.owner_id === user?.id) && (
                   <Button
                     variant="ghost"
                     size="icon"
