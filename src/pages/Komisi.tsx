@@ -300,7 +300,7 @@ export default function Komisi() {
                   <TableHead>Status</TableHead>
                   <TableHead>Tanggal</TableHead>
                   <TableHead>Tanggal Cair</TableHead>
-                   {isAdmin && <TableHead className="w-20">Aksi</TableHead>}
+                   {(isAdmin || isOwner) && <TableHead className="w-20">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
