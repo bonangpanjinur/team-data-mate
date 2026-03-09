@@ -456,7 +456,7 @@ export default function GroupDetail() {
       <Tabs defaultValue="entries">
         <TabsList>
           <TabsTrigger value="entries" className="gap-2"><FileText className="h-4 w-4" /> Data Entri</TabsTrigger>
-          {(role === "super_admin" || role === "admin") && (
+          {(role === "super_admin" || role === "admin" || role === "owner") && (
             <TabsTrigger value="members" className="gap-2"><Users className="h-4 w-4" /> Anggota</TabsTrigger>
           )}
           {(role === "super_admin" || role === "admin") && (
