@@ -828,7 +828,7 @@ export default function GroupDetail() {
                       <TableHead>Nama</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
-                      {role === "super_admin" && <TableHead className="w-16"></TableHead>}
+                      {(role === "super_admin" || role === "owner") && <TableHead className="w-16"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
