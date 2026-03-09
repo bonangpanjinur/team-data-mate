@@ -48,7 +48,6 @@ export default function AppSettings() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [savingAccess, setSavingAccess] = useState(false);
-  const [savingRates, setSavingRates] = useState(false);
   const [savingSiapInput, setSavingSiapInput] = useState(false);
   const [savingFee, setSavingFee] = useState(false);
   const [certFee, setCertFee] = useState(0);
