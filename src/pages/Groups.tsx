@@ -14,6 +14,7 @@ interface Group {
   id: string;
   name: string;
   created_at: string;
+  owner_id: string | null;
 }
 
 export default function Groups() {
