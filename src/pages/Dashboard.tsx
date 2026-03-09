@@ -128,6 +128,8 @@ export default function Dashboard() {
   const [recentEntries, setRecentEntries] = useState<DataEntry[]>([]);
   const [adminStats, setAdminStats] = useState<AdminStat[]>([]);
   const [adminPeriod, setAdminPeriod] = useState("all");
+  const [financialStats, setFinancialStats] = useState({ totalPaid: 0, totalPending: 0, activeOwners: 0, totalCerts: 0 });
+  const [monthlyRevenue, setMonthlyRevenue] = useState<{ period: string; amount: number }[]>([]);
 
   const visibleFields = fields.filter((f) => f.can_view);
 
