@@ -24,6 +24,8 @@ import NotFound from "@/pages/NotFound";
 import OwnerInvoices from "@/pages/OwnerInvoices";
 import OwnerCommissionRates from "@/pages/OwnerCommissionRates";
 import FinancialReport from "@/pages/FinancialReport";
+import OwnerTeam from "@/pages/OwnerTeam";
+import OwnerFieldAccess from "@/pages/OwnerFieldAccess";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
@@ -75,6 +77,8 @@ const AppRoutes = () => (
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin"]}><AppSettings /></ProtectedRoute>} />
     <Route path="/umkm" element={<ProtectedRoute allowedRoles={["umkm"]}><UmkmDashboard /></ProtectedRoute>} />
+    <Route path="/owner-team" element={<ProtectedRoute allowedRoles={["owner"]}><OwnerTeam /></ProtectedRoute>} />
+    <Route path="/owner-field-access" element={<ProtectedRoute allowedRoles={["owner"]}><OwnerFieldAccess /></ProtectedRoute>} />
     <Route path="/owner-invoices" element={<ProtectedRoute allowedRoles={["owner", "super_admin"]}><OwnerInvoices /></ProtectedRoute>} />
     <Route path="/owner-rates" element={<ProtectedRoute allowedRoles={["owner"]}><OwnerCommissionRates /></ProtectedRoute>} />
     <Route path="/financial-report" element={<ProtectedRoute allowedRoles={["owner", "super_admin"]}><FinancialReport /></ProtectedRoute>} />
