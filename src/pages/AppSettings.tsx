@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, ClipboardCheck, FileText, Users2 } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, ClipboardCheck, FileText, Users2, Package } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAllFieldAccess } from "@/hooks/useFieldAccess";
 
