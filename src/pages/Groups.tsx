@@ -64,11 +64,15 @@ export default function Groups() {
     setDeleteTarget(null);
   };
 
+  // Owner and super_admin can create groups
+  const canCreateGroup = role === "super_admin" || role === "owner";
+  const canDeleteGroup = role === "super_admin" || role === "owner";
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Group Halal</h1>
-        {role === "super_admin" && (
+        {canCreateGroup && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> Buat Group</Button>
@@ -76,6 +80,9 @@ export default function Groups() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Buat Group Baru</DialogTitle>
+                <DialogDescription>
+                  Buat group baru untuk mengelola data sertifikasi halal
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
