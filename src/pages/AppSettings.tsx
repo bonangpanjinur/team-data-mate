@@ -447,41 +447,6 @@ export default function AppSettings() {
           </Button>
         </TabsContent>
 
-        <TabsContent value="komisi" className="space-y-6 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Wallet className="h-5 w-5" /> Tarif Komisi per Role
-              </CardTitle>
-              <CardDescription>
-                Atur jumlah komisi (Rupiah) per data baru yang berhasil diinput oleh masing-masing role
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {ROLES.map((r) => (
-                <div key={r.key} className="flex items-center justify-between rounded-lg border p-3">
-                  <span className="text-sm font-medium">{r.label}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Rp</span>
-                    <Input
-                      type="number"
-                      value={rates[r.key] ?? 0}
-                      onChange={(e) => setRates((prev) => ({ ...prev, [r.key]: parseInt(e.target.value) || 0 }))}
-                      className="w-32 text-right font-mono"
-                      min={0}
-                      step={1000}
-                    />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Button onClick={handleSaveRates} disabled={savingRates} className="w-full gap-2">
-            {savingRates ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Simpan Tarif Komisi
-          </Button>
-        </TabsContent>
 
         <TabsContent value="tarif" className="space-y-6 mt-4">
           <Card>
