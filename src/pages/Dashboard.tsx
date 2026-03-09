@@ -326,6 +326,80 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Financial Summary - Super Admin Only */}
+      {role === "super_admin" && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+            <Card className="border-emerald-200 dark:border-emerald-800">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Pendapatan</CardTitle>
+                <DollarSign className="h-4 w-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">Rp {financialStats.totalPaid.toLocaleString("id-ID")}</p>
+                <p className="text-xs text-muted-foreground mt-1">Invoice terbayar</p>
+              </CardContent>
+            </Card>
+            <Card className="border-amber-200 dark:border-amber-800">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Belum Dibayar</CardTitle>
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">Rp {financialStats.totalPending.toLocaleString("id-ID")}</p>
+                <p className="text-xs text-muted-foreground mt-1">Invoice pending</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Owner Aktif</CardTitle>
+                <UserCheck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{financialStats.activeOwners}</p>
+                <p className="text-xs text-muted-foreground mt-1">Memiliki invoice</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Sertifikat Selesai</CardTitle>
+                <Award className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{financialStats.totalCerts}</p>
+                <p className="text-xs text-muted-foreground mt-1">Total sertifikat terbit</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Monthly Revenue Chart */}
+          {monthlyRevenue.length > 0 && (
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Pendapatan Bulanan
+                </CardTitle>
+                <CardDescription>Grafik pendapatan dari invoice terbayar per bulan</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={{ amount: { label: "Pendapatan", color: "hsl(var(--primary))" } }} className="max-h-[280px]">
+                  <BarChart data={monthlyRevenue} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid vertical={false} className="stroke-muted" />
+                    <XAxis dataKey="period" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                    <ChartTooltip content={<ChartTooltipContent />} formatter={(value) => [`Rp ${Number(value).toLocaleString("id-ID")}`, ""]} />
+                    <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]}>
+                      <LabelList dataKey="amount" position="top" style={{ fontSize: 11, fontWeight: 600, fill: "hsl(var(--foreground))" }} formatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
       {/* Status Stats Cards */}
       {totalEntries > 0 && (
         <div className="grid gap-4 sm:grid-cols-3 mb-8">
