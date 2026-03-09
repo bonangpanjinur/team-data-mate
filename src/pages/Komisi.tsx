@@ -373,7 +373,7 @@ export default function Komisi() {
                     <span>Cair: {new Date(c.paid_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
                   )}
                 </div>
-                {isAdmin && c.status === "pending" && (
+                {(isAdmin || isOwner) && c.status === "pending" && (
                   <Button variant="outline" size="sm" className="w-full mt-1" onClick={() => handleMarkPaid([c.id])}>Cairkan</Button>
                 )}
               </div>
