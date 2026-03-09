@@ -198,10 +198,24 @@ export default function GroupDetail() {
   };
 
   const fetchAvailableUsers = async () => {
-    const { data: profiles } = await supabase.from("profiles").select("*");
+    let candidateProfiles: { id: string; email: string | null; full_name: string | null }[] = [];
+
+    if (role === "owner" && user) {
+      // Owner can only add their own team members
+      const { data: teamMembers } = await supabase.from("owner_teams").select("user_id").eq("owner_id", user.id);
+      if (teamMembers && teamMembers.length > 0) {
+        const teamUserIds = teamMembers.map((t) => t.user_id);
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", teamUserIds);
+        candidateProfiles = profiles ?? [];
+      }
+    } else {
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email");
+      candidateProfiles = profiles ?? [];
+    }
+
     const { data: existing } = await supabase.from("group_members").select("user_id").eq("group_id", groupId ?? "");
     const existingIds = new Set(existing?.map((e) => e.user_id));
-    setAvailableUsers((profiles ?? []).filter((p) => !existingIds.has(p.id)));
+    setAvailableUsers(candidateProfiles.filter((p) => !existingIds.has(p.id)));
   };
   const fetchUmkmUsers = async () => {
     const { data: roles } = await supabase
@@ -456,7 +470,7 @@ export default function GroupDetail() {
       <Tabs defaultValue="entries">
         <TabsList>
           <TabsTrigger value="entries" className="gap-2"><FileText className="h-4 w-4" /> Data Entri</TabsTrigger>
-          {(role === "super_admin" || role === "admin") && (
+          {(role === "super_admin" || role === "admin" || role === "owner") && (
             <TabsTrigger value="members" className="gap-2"><Users className="h-4 w-4" /> Anggota</TabsTrigger>
           )}
           {(role === "super_admin" || role === "admin") && (
@@ -787,9 +801,9 @@ export default function GroupDetail() {
           )}
         </TabsContent>
 
-        {(role === "super_admin" || role === "admin") && (
+        {(role === "super_admin" || role === "admin" || role === "owner") && (
           <TabsContent value="members" className="mt-4">
-            {role === "super_admin" && (
+            {(role === "super_admin" || role === "owner") && (
               <div className="mb-4">
                 <Dialog open={addMemberOpen} onOpenChange={(o) => { setAddMemberOpen(o); if (o) fetchAvailableUsers(); }}>
                   <DialogTrigger asChild>
@@ -828,7 +842,7 @@ export default function GroupDetail() {
                       <TableHead>Nama</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
-                      {role === "super_admin" && <TableHead className="w-16"></TableHead>}
+                      {(role === "super_admin" || role === "owner") && <TableHead className="w-16"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -839,7 +853,7 @@ export default function GroupDetail() {
                         <TableCell>
                           <Badge variant="outline">{m.role?.replace("_", " ") ?? "-"}</Badge>
                         </TableCell>
-                        {role === "super_admin" && (
+                        {(role === "super_admin" || role === "owner") && (
                           <TableCell>
                             <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(m.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -875,7 +889,7 @@ export default function GroupDetail() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant="outline" className="text-xs">{m.role?.replace("_", " ") ?? "-"}</Badge>
-                      {role === "super_admin" && (
+                      {(role === "super_admin" || role === "owner") && (
                         <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(m.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
