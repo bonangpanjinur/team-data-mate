@@ -333,7 +333,7 @@ export default function Komisi() {
                            ? new Date(c.paid_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
                            : "-"}
                        </TableCell>
-                       {isAdmin && (
+                       {(isAdmin || isOwner) && (
                         <TableCell>
                           {c.status === "pending" && (
                             <Button variant="ghost" size="sm" onClick={() => handleMarkPaid([c.id])}>Cairkan</Button>
