@@ -7,10 +7,229 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, ClipboardCheck, FileText, Users2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAllFieldAccess } from "@/hooks/useFieldAccess";
+
+interface OwnerPricing {
+  id: string;
+  owner_id: string | null;
+  pricing_type: string;
+  amount: number;
+  description: string | null;
+  is_active: boolean;
+  owner_name?: string;
+}
+
+const PRICING_TYPES = [
+  { key: "per_certificate", label: "Per Sertifikat" },
+  { key: "per_group", label: "Per Group" },
+  { key: "monthly", label: "Bulanan" },
+  { key: "custom", label: "Custom" },
+];
+
+function OwnerPricingTab() {
+  const [owners, setOwners] = useState<{ id: string; name: string }[]>([]);
+  const [pricing, setPricing] = useState<OwnerPricing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Form state
+  const [selectedOwner, setSelectedOwner] = useState<string>("global");
+  const [selectedType, setSelectedType] = useState<string>("per_certificate");
+  const [amount, setAmount] = useState<number>(0);
+  const [description, setDescription] = useState<string>("");
+
+  const fetchData = async () => {
+    setLoading(true);
+    // Fetch owners
+    const { data: ownerRoles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "owner");
+    
+    if (ownerRoles && ownerRoles.length > 0) {
+      const ownerIds = ownerRoles.map((o) => o.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", ownerIds);
+      setOwners(
+        (profiles ?? []).map((p) => ({
+          id: p.id,
+          name: p.full_name || p.email || "Unknown",
+        }))
+      );
+    }
+
+    // Fetch pricing
+    const { data: pricingData } = await supabase
+      .from("owner_pricing")
+      .select("*")
+      .order("created_at", { ascending: true });
+    setPricing((pricingData as OwnerPricing[]) ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const ownerId = selectedOwner === "global" ? null : selectedOwner;
+
+    await supabase
+      .from("owner_pricing")
+      .upsert(
+        {
+          owner_id: ownerId,
+          pricing_type: selectedType,
+          amount,
+          description: description || null,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+
+    setSaving(false);
+    toast({ title: "Harga berhasil disimpan" });
+    fetchData();
+    // Reset form
+    setSelectedOwner("global");
+    setSelectedType("per_certificate");
+    setAmount(0);
+    setDescription("");
+  };
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(value);
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users2 className="h-5 w-5" /> Harga per Owner
+          </CardTitle>
+          <CardDescription>
+            Set harga default (global) atau khusus untuk owner tertentu
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Owner</Label>
+              <Select value={selectedOwner} onValueChange={setSelectedOwner}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih owner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="global">Default (Semua Owner)</SelectItem>
+                  {owners.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipe Harga</Label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRICING_TYPES.map((t) => (
+                    <SelectItem key={t.key} value={t.key}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Nominal (Rp)</Label>
+              <Input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
+                min={0}
+                step={10000}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Keterangan (opsional)</Label>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Keterangan tambahan"
+              />
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={saving} className="w-full">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+            Simpan Harga
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Daftar Harga Terdaftar</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : pricing.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Belum ada harga yang diatur</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Owner</TableHead>
+                  <TableHead>Tipe</TableHead>
+                  <TableHead className="text-right">Nominal</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pricing.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>
+                      {p.owner_id ? owners.find((o) => o.id === p.owner_id)?.name || "Unknown" : "Default (Global)"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {PRICING_TYPES.find((t) => t.key === p.pricing_type)?.label || p.pricing_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono">{formatCurrency(p.amount)}</TableCell>
+                    <TableCell>
+                      <Badge variant={p.is_active ? "default" : "secondary"}>
+                        {p.is_active ? "Aktif" : "Nonaktif"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 const COLOR_PRESETS = [
   { label: "Biru Profesional", value: "217 91% 50%" },
