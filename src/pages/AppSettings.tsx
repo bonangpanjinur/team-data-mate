@@ -690,6 +690,10 @@ export default function AppSettings() {
         <TabsContent value="pricing" className="space-y-6 mt-4">
           <OwnerPricingTab />
         </TabsContent>
+
+        <TabsContent value="kuota" className="space-y-6 mt-4">
+          <OwnerQuotaTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
