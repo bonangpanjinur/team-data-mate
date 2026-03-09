@@ -53,7 +53,7 @@ export default function OwnerInvoices() {
     if (!user) return;
     setLoading(true);
 
-    let query = supabase
+    let query = (supabase as any)
       .from("owner_invoices")
       .select("*")
       .order("created_at", { ascending: false });
