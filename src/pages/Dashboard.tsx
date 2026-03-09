@@ -215,6 +215,37 @@ export default function Dashboard() {
     fetchRecentEntries();
   }, [role, user]);
 
+  // Financial stats for super_admin
+  useEffect(() => {
+    if (role !== "super_admin") return;
+    const fetchFinancial = async () => {
+      // Get all invoices
+      const { data: invoices } = await (supabase as any).from("owner_invoices").select("amount, status, period, owner_id");
+      if (invoices) {
+        const totalPaid = invoices.filter((i: any) => i.status === "paid").reduce((s: number, i: any) => s + (i.amount || 0), 0);
+        const totalPending = invoices.filter((i: any) => i.status === "pending").reduce((s: number, i: any) => s + (i.amount || 0), 0);
+        const activeOwners = new Set(invoices.map((i: any) => i.owner_id)).size;
+
+        // Monthly revenue (paid only, last 12 months)
+        const monthlyMap: Record<string, number> = {};
+        invoices.filter((i: any) => i.status === "paid").forEach((i: any) => {
+          if (i.period) monthlyMap[i.period] = (monthlyMap[i.period] || 0) + (i.amount || 0);
+        });
+        const monthly = Object.entries(monthlyMap)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .slice(-12)
+          .map(([period, amount]) => ({ period, amount }));
+        
+        setMonthlyRevenue(monthly);
+        
+        // Count sertifikat_selesai
+        const { count: certCount } = await supabase.from("data_entries").select("id", { count: "exact", head: true }).eq("status", "sertifikat_selesai");
+        
+        setFinancialStats({ totalPaid, totalPending, activeOwners, totalCerts: certCount ?? 0 });
+      }
+    };
+    fetchFinancial();
+
   // Admin performance stats for super_admin
   useEffect(() => {
     if (role !== "super_admin") return;
