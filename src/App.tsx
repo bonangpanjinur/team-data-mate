@@ -37,6 +37,10 @@ function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allow
     if (allowedRoles && !allowedRoles.includes("umkm")) return <Navigate to="/umkm" replace />;
     return <AppLayout>{children}</AppLayout>;
   }
+  if (role === "owner") {
+    if (allowedRoles && !allowedRoles.includes("owner")) return <Navigate to="/dashboard" replace />;
+    return <AppLayout>{children}</AppLayout>;
+  }
   if (allowedRoles && role && !allowedRoles.includes(role)) return <Navigate to="/dashboard" replace />;
 
   return <AppLayout>{children}</AppLayout>;

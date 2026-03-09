@@ -51,6 +51,14 @@ const NAV_ITEMS = {
     { label: "Share Link", icon: Link2, path: "/share" },
     { label: "Komisi", icon: Wallet, path: "/komisi" },
   ],
+  owner: [
+    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { label: "Group Halal", icon: FolderOpen, path: "/groups" },
+    { label: "Share Link", icon: Link2, path: "/share" },
+    { label: "Komisi Tim", icon: Wallet, path: "/owner-rates" },
+    { label: "Tagihan", icon: FileText, path: "/owner-invoices" },
+    { label: "Laporan", icon: BarChart3, path: "/financial-report" },
+  ],
   admin_input: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
