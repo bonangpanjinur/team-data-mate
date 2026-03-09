@@ -258,7 +258,7 @@ export default function Komisi() {
       </div>
 
       {/* Action bar for admin */}
-      {isAdmin && pendingIds.length > 0 && (
+      {(isAdmin || isOwner) && pendingIds.length > 0 && (
         <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
           <p className="text-sm text-muted-foreground">
             {pendingIds.length} komisi pending
