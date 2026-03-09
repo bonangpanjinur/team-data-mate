@@ -68,9 +68,9 @@ export default function OwnerInvoices() {
     const { data } = await query;
     if (data) {
       // Enrich with entry names and group names
-      const entryIds = [...new Set(data.map((i: any) => i.entry_id).filter(Boolean))];
-      const groupIds = [...new Set(data.map((i: any) => i.group_id).filter(Boolean))];
-      const ownerIds = isSuperAdmin ? [...new Set(data.map((i: any) => i.owner_id))] : [];
+      const entryIds = [...new Set(data.map((i: any) => i.entry_id).filter(Boolean))] as string[];
+      const groupIds = [...new Set(data.map((i: any) => i.group_id).filter(Boolean))] as string[];
+      const ownerIds = (isSuperAdmin ? [...new Set(data.map((i: any) => i.owner_id))] : []) as string[];
 
       let entryMap = new Map<string, string>();
       let groupMap = new Map<string, string>();
