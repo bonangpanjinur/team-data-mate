@@ -47,7 +47,7 @@ function generatePeriodOptions(): { value: string; label: string }[] {
 export default function Komisi() {
   const { user, role } = useAuth();
   const isAdmin = role === "super_admin" || role === "admin";
-
+  const isOwner = role === "owner";
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("mine");
@@ -61,7 +61,7 @@ export default function Komisi() {
     if (!user) return;
     setLoading(true);
 
-    const targetUserId = isAdmin && selectedUser !== "mine" ? selectedUser : user.id;
+    const targetUserId = (isAdmin || isOwner) && selectedUser !== "mine" ? selectedUser : user.id;
 
     let query = supabase
       .from("commissions")
@@ -94,14 +94,14 @@ export default function Komisi() {
   };
 
   const fetchUsers = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isOwner) return;
     const { data } = await supabase.from("profiles").select("id, full_name, email");
     setUsers(data ?? []);
   };
 
   useEffect(() => {
     fetchCommissions();
-    if (isAdmin) fetchUsers();
+    if (isAdmin || isOwner) fetchUsers();
   }, [user, selectedUser, selectedPeriod]);
 
   const totalEarned = commissions.reduce((sum, c) => sum + c.amount, 0);
@@ -180,7 +180,7 @@ export default function Komisi() {
             </SelectContent>
           </Select>
 
-          {isAdmin && (
+          {(isAdmin || isOwner) && (
             <Select value={selectedUser} onValueChange={setSelectedUser}>
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Lihat komisi user..." />
@@ -195,7 +195,7 @@ export default function Komisi() {
               </SelectContent>
             </Select>
           )}
-          {isAdmin && (
+          {(isAdmin || isOwner) && (
             <Button variant="outline" size="sm" onClick={exportCSV}>
               <Download className="mr-2 h-4 w-4" />
               Export CSV
@@ -258,7 +258,7 @@ export default function Komisi() {
       </div>
 
       {/* Action bar for admin */}
-      {isAdmin && pendingIds.length > 0 && (
+      {(isAdmin || isOwner) && pendingIds.length > 0 && (
         <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
           <p className="text-sm text-muted-foreground">
             {pendingIds.length} komisi pending
@@ -300,17 +300,17 @@ export default function Komisi() {
                   <TableHead>Status</TableHead>
                   <TableHead>Tanggal</TableHead>
                   <TableHead>Tanggal Cair</TableHead>
-                   {isAdmin && <TableHead className="w-20">Aksi</TableHead>}
+                   {(isAdmin || isOwner) && <TableHead className="w-20">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                     <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">Memuat...</TableCell>
+                     <TableCell colSpan={(isAdmin || isOwner) ? 7 : 6} className="text-center py-8 text-muted-foreground">Memuat...</TableCell>
                   </TableRow>
                 ) : commissions.length === 0 ? (
                   <TableRow>
-                     <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                     <TableCell colSpan={(isAdmin || isOwner) ? 7 : 6} className="text-center py-8 text-muted-foreground">
                        Belum ada komisi{selectedPeriod !== "all" ? ` untuk periode ${selectedPeriod}` : ""}
                      </TableCell>
                   </TableRow>
@@ -333,7 +333,7 @@ export default function Komisi() {
                            ? new Date(c.paid_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
                            : "-"}
                        </TableCell>
-                       {isAdmin && (
+                       {(isAdmin || isOwner) && (
                         <TableCell>
                           {c.status === "pending" && (
                             <Button variant="ghost" size="sm" onClick={() => handleMarkPaid([c.id])}>Cairkan</Button>
@@ -373,7 +373,7 @@ export default function Komisi() {
                     <span>Cair: {new Date(c.paid_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
                   )}
                 </div>
-                {isAdmin && c.status === "pending" && (
+                {(isAdmin || isOwner) && c.status === "pending" && (
                   <Button variant="outline" size="sm" className="w-full mt-1" onClick={() => handleMarkPaid([c.id])}>Cairkan</Button>
                 )}
               </div>

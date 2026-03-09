@@ -1,115 +1,29 @@
 
 
-## Rencana: Sistem Owner, Komisi Berlapis, dan Laporan Keuangan
+## Analisis Bug
 
-### Konteks Saat Ini
-- Role yang ada: `super_admin`, `admin`, `lapangan`, `nib`, `admin_input`, `umkm`
-- Komisi saat ini: flat per-entry berdasarkan role, dikelola super_admin
-- Belum ada konsep "owner" dan "biaya per sertifikat"
+### Bug 1: Delete user gagal (400 error)
+**Penyebab**: `data_entries` memiliki kolom `created_by`, `pic_user_id`, dan `umkm_user_id` yang mereferensikan user. Edge function `delete-user` tidak membersihkan referensi ini sebelum menghapus user dari `auth.users`, sehingga terjadi FK constraint error.
 
-### Konsep Bisnis Baru
+Dari network request: user `b9e5d426-e264-4a35-b350-9954b0defadd` (Siti Admin Input) memiliki `data_entries` dengan `created_by` mengarah ke dia.
 
-```text
-SUPER ADMIN (Platform)
-  |
-  |-- Menetapkan TARIF per sertifikat yang harus dibayar Owner
-  |-- Melihat semua laporan keuangan platform
-  |
-OWNER (Pemilik bisnis sertifikasi)
-  |
-  |-- Membayar tarif per sertifikat ke platform (tagihan)
-  |-- Mengatur komisi per-role untuk tim di bawahnya
-  |-- Melihat laporan keuangan: pendapatan vs pengeluaran
-  |
-TIM (lapangan, nib, admin_input, admin)
-  |
-  |-- Menerima komisi dari Owner sesuai rate yang Owner tentukan
-```
+**Fix**: Update `delete-user/index.ts` untuk nullify/delete referensi di `data_entries` (`created_by`, `pic_user_id`, `umkm_user_id`) dan `audit_logs` (`changed_by`) sebelum menghapus user.
+
+### Bug 2: User baru tidak muncul di list
+**Penyebab**: `fetchUsers()` dipanggil langsung setelah `create-user` berhasil, tapi profile dibuat oleh trigger `handle_new_user` yang mungkin belum selesai. Juga, `supabase.functions.invoke` tidak throw error pada non-2xx - perlu cek `data.error` juga. Selain itu, perlu delay kecil sebelum fetch.
+
+**Fix**: Tambah delay kecil (500ms) sebelum `fetchUsers()` setelah create, agar trigger database punya waktu membuat profile.
 
 ### Rencana Implementasi
 
-#### 1. Database Migration
+**File 1: `supabase/functions/delete-user/index.ts`**
+- Tambah nullify `data_entries.created_by`, `data_entries.pic_user_id`, `data_entries.umkm_user_id` sebelum delete
+- Tambah nullify `audit_logs.changed_by`
+- Tambah delete `entry_photos` terkait entries user
+- Tambah error logging yang lebih detail
 
-**a. Tambah role `owner` ke enum `app_role`:**
-```sql
-ALTER TYPE public.app_role ADD VALUE 'owner';
-```
-
-**b. Tabel `certificate_fees` -- Tarif per sertifikat (diatur super_admin):**
-- `id`, `amount` (integer, biaya per sertifikat selesai), `updated_by`, `updated_at`
-- Satu baris saja (singleton config)
-
-**c. Tabel `owner_invoices` -- Tagihan owner ke platform:**
-- `id`, `owner_id` (uuid), `entry_id` (uuid), `group_id` (uuid), `amount` (integer), `status` (pending/paid), `period` (text), `created_at`, `paid_at`
-- Otomatis dibuat saat entry mencapai `sertifikat_selesai`
-
-**d. Modifikasi `commission_rates`:**
-- Tambah kolom `owner_id` (uuid, nullable) -- null = tarif default super_admin, non-null = tarif custom owner
-- Owner bisa set rate untuk role: lapangan, nib, admin_input, admin
-
-**e. Trigger `auto_create_owner_invoice`:**
-- Saat `data_entries.status` berubah ke `sertifikat_selesai`, buat invoice di `owner_invoices` untuk owner group tersebut
-
-**f. RLS policies:**
-- `certificate_fees`: super_admin manage, authenticated read
-- `owner_invoices`: super_admin read all, owner read own
-- `commission_rates` update: owner bisa manage rate miliknya (where `owner_id = auth.uid()`)
-
-#### 2. Halaman Baru & Modifikasi
-
-**a. Navigation (`AppLayout.tsx`):**
-- Tambah nav untuk `owner`: Dashboard, Group Halal, Share Link, Komisi Tim, Tagihan, Laporan Keuangan
-
-**b. Halaman Tagihan Owner (`src/pages/OwnerInvoices.tsx`):**
-- List tagihan per sertifikat selesai
-- Summary: total tagihan, sudah bayar, belum bayar
-- Super admin bisa mark as paid
-- Owner hanya lihat
-
-**c. Halaman Komisi Tim (`src/pages/OwnerCommissionRates.tsx`):**
-- Owner set rate komisi per role (lapangan, nib, admin_input, admin)
-- Tidak bisa atur rate super_admin/owner
-
-**d. Halaman Laporan Keuangan (`src/pages/FinancialReport.tsx`):**
-- **Untuk Owner**: Pendapatan (total sertifikat x fee klien) vs Pengeluaran (komisi tim + tagihan platform), profit
-- **Untuk Super Admin**: Total tagihan semua owner, status pembayaran, ringkasan per periode
-- Chart pendapatan vs pengeluaran per bulan
-- Export CSV
-
-**e. Modifikasi `AppSettings.tsx`:**
-- Tab baru "Tarif Sertifikat" (super_admin only) -- set biaya per sertifikat yang ditagihkan ke owner
-
-**f. Modifikasi `Komisi.tsx`:**
-- Owner melihat komisi yang dia keluarkan ke tim
-- Super admin tetap seperti sekarang + bisa lihat semua owner
-
-**g. Routing (`App.tsx`):**
-- Tambah route: `/owner-invoices`, `/owner-rates`, `/financial-report`
-- Owner mendapat akses ke halaman-halaman barunya
-
-#### 3. Alur Bisnis Lengkap
-
-```text
-1. Super Admin set tarif sertifikat: Rp X per sertifikat selesai
-2. Owner set komisi tim: lapangan=Rp A, nib=Rp B, admin_input=Rp C
-3. Tim kerja -> status entry berubah -> komisi otomatis tercatat
-4. Entry capai "sertifikat_selesai" -> invoice otomatis ke owner
-5. Owner bayar tagihan -> super admin konfirmasi
-6. Laporan keuangan:
-   - Owner: total tagihan platform, total komisi tim, profit
-   - Super Admin: total pendapatan dari semua owner
-```
-
-#### 4. File yang Diubah/Dibuat
-
-| File | Aksi |
-|------|------|
-| Migration SQL | Buat: enum owner, certificate_fees, owner_invoices, alter commission_rates |
-| `src/components/AppLayout.tsx` | Edit: tambah nav owner |
-| `src/App.tsx` | Edit: tambah routes baru |
-| `src/pages/OwnerInvoices.tsx` | Buat: halaman tagihan |
-| `src/pages/OwnerCommissionRates.tsx` | Buat: owner atur rate tim |
-| `src/pages/FinancialReport.tsx` | Buat: laporan keuangan |
-| `src/pages/AppSettings.tsx` | Edit: tab tarif sertifikat |
-| `src/pages/Komisi.tsx` | Edit: adaptasi untuk owner |
+**File 2: `src/pages/UsersManagement.tsx`**
+- Tambah delay sebelum `fetchUsers()` setelah create user berhasil
+- Fix error handling pada `handleDelete` (cek `data?.error` juga)
+- Tambah `DialogDescription` untuk fix warning
 

@@ -191,6 +191,7 @@ export default function UsersManagement() {
                 <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="admin_input">Admin Input</SelectItem>
                     <SelectItem value="lapangan">Lapangan</SelectItem>
@@ -219,6 +220,7 @@ export default function UsersManagement() {
               <SelectContent>
                 <SelectItem value="all">Semua Role</SelectItem>
                 <SelectItem value="super_admin">Super Admin</SelectItem>
+                <SelectItem value="owner">Owner</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="admin_input">Admin Input</SelectItem>
                 <SelectItem value="lapangan">Lapangan</SelectItem>
@@ -408,6 +410,7 @@ export default function UsersManagement() {
               <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="owner">Owner</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="admin_input">Admin Input</SelectItem>
                   <SelectItem value="lapangan">Lapangan</SelectItem>

@@ -19,6 +19,8 @@ import {
   Wallet,
   ClipboardList,
   Bell,
+  FileText,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +31,8 @@ const NAV_ITEMS = {
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
     { label: "Komisi", icon: Wallet, path: "/komisi" },
+    { label: "Tagihan Owner", icon: FileText, path: "/owner-invoices" },
+    { label: "Laporan", icon: BarChart3, path: "/financial-report" },
     { label: "Pengaturan", icon: Settings, path: "/settings" },
   ],
   admin: [
@@ -48,6 +52,14 @@ const NAV_ITEMS = {
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
     { label: "Komisi", icon: Wallet, path: "/komisi" },
+  ],
+  owner: [
+    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { label: "Group Halal", icon: FolderOpen, path: "/groups" },
+    { label: "Share Link", icon: Link2, path: "/share" },
+    { label: "Komisi Tim", icon: Wallet, path: "/owner-rates" },
+    { label: "Tagihan", icon: FileText, path: "/owner-invoices" },
+    { label: "Laporan", icon: BarChart3, path: "/financial-report" },
   ],
   admin_input: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },

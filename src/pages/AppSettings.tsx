@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, Wallet, ClipboardCheck } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, Wallet, ClipboardCheck, FileText } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAllFieldAccess } from "@/hooks/useFieldAccess";
 
@@ -50,7 +50,8 @@ export default function AppSettings() {
   const [savingAccess, setSavingAccess] = useState(false);
   const [savingRates, setSavingRates] = useState(false);
   const [savingSiapInput, setSavingSiapInput] = useState(false);
-
+  const [savingFee, setSavingFee] = useState(false);
+  const [certFee, setCertFee] = useState(0);
   // Siap Input required fields
   const [siapInputFields, setSiapInputFields] = useState<string[]>(["nama", "ktp", "nib", "foto_produk", "foto_verifikasi"]);
 
@@ -96,6 +97,13 @@ export default function AppSettings() {
       }
     };
     load();
+
+    // Load certificate fee
+    const loadFee = async () => {
+      const { data } = await (supabase as any).from("certificate_fees").select("amount").limit(1).single();
+      if (data) setCertFee(data.amount);
+    };
+    loadFee();
   }, []);
 
   // Load commission rates
@@ -220,7 +228,7 @@ export default function AppSettings() {
       <h1 className="text-2xl font-bold">Pengaturan</h1>
 
       <Tabs defaultValue="tampilan">
-        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4">
+        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="tampilan" className="gap-1 text-xs sm:text-sm">
             <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tampilan</span><span className="sm:hidden">UI</span>
           </TabsTrigger>
@@ -232,6 +240,9 @@ export default function AppSettings() {
           </TabsTrigger>
           <TabsTrigger value="komisi" className="gap-1 text-xs sm:text-sm">
             <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Komisi
+          </TabsTrigger>
+          <TabsTrigger value="tarif" className="gap-1 text-xs sm:text-sm">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tarif Sertifikat</span><span className="sm:hidden">Tarif</span>
           </TabsTrigger>
         </TabsList>
 
@@ -472,6 +483,55 @@ export default function AppSettings() {
           <Button onClick={handleSaveRates} disabled={savingRates} className="w-full gap-2">
             {savingRates ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Simpan Tarif Komisi
+          </Button>
+        </TabsContent>
+
+        <TabsContent value="tarif" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5" /> Tarif per Sertifikat
+              </CardTitle>
+              <CardDescription>
+                Biaya yang ditagihkan ke Owner setiap kali sertifikat halal selesai diproses
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <span className="text-sm font-medium">Biaya per Sertifikat Selesai</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Rp</span>
+                  <Input
+                    type="number"
+                    value={certFee}
+                    onChange={e => setCertFee(parseInt(e.target.value) || 0)}
+                    className="w-40 text-right font-mono"
+                    min={0}
+                    step={10000}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tagihan akan otomatis dibuat untuk Owner ketika status entry berubah ke "Sertifikat Selesai"
+              </p>
+            </CardContent>
+          </Card>
+
+          <Button
+            onClick={async () => {
+              setSavingFee(true);
+              await (supabase as any)
+                .from("certificate_fees")
+                .update({ amount: certFee, updated_at: new Date().toISOString() })
+                .neq("id", "00000000-0000-0000-0000-000000000000");
+              setSavingFee(false);
+              toast({ title: "Tarif sertifikat berhasil disimpan" });
+            }}
+            disabled={savingFee}
+            className="w-full gap-2"
+          >
+            {savingFee ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Simpan Tarif Sertifikat
           </Button>
         </TabsContent>
       </Tabs>

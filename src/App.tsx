@@ -21,6 +21,9 @@ import Komisi from "@/pages/Komisi";
 import UmkmDashboard from "@/pages/UmkmDashboard";
 import Register from "@/pages/Register";
 import NotFound from "@/pages/NotFound";
+import OwnerInvoices from "@/pages/OwnerInvoices";
+import OwnerCommissionRates from "@/pages/OwnerCommissionRates";
+import FinancialReport from "@/pages/FinancialReport";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
@@ -32,6 +35,10 @@ function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allow
   if (!user) return <Navigate to="/login" replace />;
   if (role === "umkm") {
     if (allowedRoles && !allowedRoles.includes("umkm")) return <Navigate to="/umkm" replace />;
+    return <AppLayout>{children}</AppLayout>;
+  }
+  if (role === "owner") {
+    if (allowedRoles && !allowedRoles.includes("owner")) return <Navigate to="/dashboard" replace />;
     return <AppLayout>{children}</AppLayout>;
   }
   if (allowedRoles && role && !allowedRoles.includes(role)) return <Navigate to="/dashboard" replace />;
@@ -68,6 +75,9 @@ const AppRoutes = () => (
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin"]}><AppSettings /></ProtectedRoute>} />
     <Route path="/umkm" element={<ProtectedRoute allowedRoles={["umkm"]}><UmkmDashboard /></ProtectedRoute>} />
+    <Route path="/owner-invoices" element={<ProtectedRoute allowedRoles={["owner", "super_admin"]}><OwnerInvoices /></ProtectedRoute>} />
+    <Route path="/owner-rates" element={<ProtectedRoute allowedRoles={["owner"]}><OwnerCommissionRates /></ProtectedRoute>} />
+    <Route path="/financial-report" element={<ProtectedRoute allowedRoles={["owner", "super_admin"]}><FinancialReport /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
