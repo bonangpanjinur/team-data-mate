@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, Wallet, ClipboardCheck, FileText } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, ClipboardCheck, FileText } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAllFieldAccess } from "@/hooks/useFieldAccess";
 
@@ -48,21 +48,11 @@ export default function AppSettings() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [savingAccess, setSavingAccess] = useState(false);
-  const [savingRates, setSavingRates] = useState(false);
   const [savingSiapInput, setSavingSiapInput] = useState(false);
   const [savingFee, setSavingFee] = useState(false);
   const [certFee, setCertFee] = useState(0);
   // Siap Input required fields
   const [siapInputFields, setSiapInputFields] = useState<string[]>(["nama", "ktp", "nib", "foto_produk", "foto_verifikasi"]);
-
-  // Commission rates
-  const [rates, setRates] = useState<Record<string, number>>({
-    super_admin: 0,
-    admin: 5000,
-    admin_input: 0,
-    lapangan: 10000,
-    nib: 5000,
-  });
 
   const { allAccess, loading: accessLoading, refetch: refetchAccess } = useAllFieldAccess();
 
@@ -106,18 +96,6 @@ export default function AppSettings() {
     loadFee();
   }, []);
 
-  // Load commission rates
-  useEffect(() => {
-    const loadRates = async () => {
-      const { data } = await supabase.from("commission_rates").select("role, amount_per_entry");
-      if (data) {
-        const r: Record<string, number> = {};
-        data.forEach((row: any) => { r[row.role] = row.amount_per_entry; });
-        setRates(r);
-      }
-    };
-    loadRates();
-  }, []);
 
   useEffect(() => {
     document.documentElement.style.setProperty("--primary", primaryColor);
@@ -201,19 +179,6 @@ export default function AppSettings() {
     toast({ title: "Hak akses berhasil disimpan" });
   };
 
-  const handleSaveRates = async () => {
-    setSavingRates(true);
-    for (const [r, amount] of Object.entries(rates)) {
-      await supabase
-        .from("commission_rates")
-        .upsert(
-          { role: r as any, amount_per_entry: amount, updated_at: new Date().toISOString() },
-          { onConflict: "role" }
-        );
-    }
-    setSavingRates(false);
-    toast({ title: "Tarif komisi berhasil disimpan" });
-  };
 
   if (role !== "super_admin") {
     return (
@@ -228,7 +193,7 @@ export default function AppSettings() {
       <h1 className="text-2xl font-bold">Pengaturan</h1>
 
       <Tabs defaultValue="tampilan">
-        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-5">
+        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="tampilan" className="gap-1 text-xs sm:text-sm">
             <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tampilan</span><span className="sm:hidden">UI</span>
           </TabsTrigger>
@@ -237,9 +202,6 @@ export default function AppSettings() {
           </TabsTrigger>
           <TabsTrigger value="siap_input" className="gap-1 text-xs sm:text-sm">
             <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Siap Input</span><span className="sm:hidden">Input</span>
-          </TabsTrigger>
-          <TabsTrigger value="komisi" className="gap-1 text-xs sm:text-sm">
-            <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Komisi
           </TabsTrigger>
           <TabsTrigger value="tarif" className="gap-1 text-xs sm:text-sm">
             <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tarif Sertifikat</span><span className="sm:hidden">Tarif</span>
@@ -450,41 +412,6 @@ export default function AppSettings() {
           </Button>
         </TabsContent>
 
-        <TabsContent value="komisi" className="space-y-6 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Wallet className="h-5 w-5" /> Tarif Komisi per Role
-              </CardTitle>
-              <CardDescription>
-                Atur jumlah komisi (Rupiah) per data baru yang berhasil diinput oleh masing-masing role
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {ROLES.map((r) => (
-                <div key={r.key} className="flex items-center justify-between rounded-lg border p-3">
-                  <span className="text-sm font-medium">{r.label}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Rp</span>
-                    <Input
-                      type="number"
-                      value={rates[r.key] ?? 0}
-                      onChange={(e) => setRates((prev) => ({ ...prev, [r.key]: parseInt(e.target.value) || 0 }))}
-                      className="w-32 text-right font-mono"
-                      min={0}
-                      step={1000}
-                    />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Button onClick={handleSaveRates} disabled={savingRates} className="w-full gap-2">
-            {savingRates ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Simpan Tarif Komisi
-          </Button>
-        </TabsContent>
 
         <TabsContent value="tarif" className="space-y-6 mt-4">
           <Card>
