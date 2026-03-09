@@ -39,7 +39,13 @@ export default function Groups() {
     if (!user) return;
     setCreating(true);
 
-    const { error } = await supabase.from("groups").insert({ name: newName, created_by: user.id });
+    // If owner is creating, set owner_id to themselves
+    const insertData: any = { name: newName, created_by: user.id };
+    if (role === "owner") {
+      insertData.owner_id = user.id;
+    }
+
+    const { error } = await supabase.from("groups").insert(insertData);
     setCreating(false);
 
     if (error) {
