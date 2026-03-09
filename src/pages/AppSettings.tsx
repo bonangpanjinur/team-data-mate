@@ -97,6 +97,13 @@ export default function AppSettings() {
       }
     };
     load();
+
+    // Load certificate fee
+    const loadFee = async () => {
+      const { data } = await (supabase as any).from("certificate_fees").select("amount").limit(1).single();
+      if (data) setCertFee(data.amount);
+    };
+    loadFee();
   }, []);
 
   // Load commission rates
