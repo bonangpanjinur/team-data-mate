@@ -61,7 +61,7 @@ export default function Komisi() {
     if (!user) return;
     setLoading(true);
 
-    const targetUserId = isAdmin && selectedUser !== "mine" ? selectedUser : user.id;
+    const targetUserId = (isAdmin || isOwner) && selectedUser !== "mine" ? selectedUser : user.id;
 
     let query = supabase
       .from("commissions")
