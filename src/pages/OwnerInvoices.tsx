@@ -106,9 +106,9 @@ export default function OwnerInvoices() {
   const totalPaid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
 
   const handleMarkPaid = async (ids: string[]) => {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("owner_invoices")
-      .update({ status: "paid", paid_at: new Date().toISOString() } as any)
+      .update({ status: "paid", paid_at: new Date().toISOString() })
       .in("id", ids);
     if (error) {
       toast({ title: "Gagal", description: error.message, variant: "destructive" });

@@ -36,7 +36,7 @@ export default function FinancialReport() {
       setLoading(true);
 
       // Fetch invoices for the year
-      let invQuery = supabase
+      let invQuery = (supabase as any)
         .from("owner_invoices")
         .select("amount, status, period, owner_id")
         .like("period", `${selectedYear}-%`);
