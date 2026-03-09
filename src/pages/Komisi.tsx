@@ -47,7 +47,7 @@ function generatePeriodOptions(): { value: string; label: string }[] {
 export default function Komisi() {
   const { user, role } = useAuth();
   const isAdmin = role === "super_admin" || role === "admin";
-
+  const isOwner = role === "owner";
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("mine");
