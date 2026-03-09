@@ -75,6 +75,7 @@ export type Database = {
         Row: {
           amount_per_entry: number
           id: string
+          owner_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string | null
           updated_by: string | null
@@ -82,6 +83,7 @@ export type Database = {
         Insert: {
           amount_per_entry?: number
           id?: string
+          owner_id?: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
           updated_by?: string | null
@@ -89,6 +91,7 @@ export type Database = {
         Update: {
           amount_per_entry?: number
           id?: string
+          owner_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
           updated_by?: string | null
@@ -360,6 +363,7 @@ export type Database = {
           created_by: string
           id: string
           name: string
+          owner_id: string | null
           updated_at: string
         }
         Insert: {
@@ -367,6 +371,7 @@ export type Database = {
           created_by: string
           id?: string
           name: string
+          owner_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -374,6 +379,7 @@ export type Database = {
           created_by?: string
           id?: string
           name?: string
+          owner_id?: string | null
           updated_at?: string
         }
         Relationships: []
