@@ -57,6 +57,7 @@ const NAV_ITEMS = {
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
+    { label: "Notifikasi", icon: Bell, path: "/notifications" },
     { label: "Kelola Tim", icon: Users, path: "/owner-team" },
     { label: "Akses Field", icon: Shield, path: "/owner-field-access" },
     { label: "Komisi Tim", icon: Wallet, path: "/owner-rates" },

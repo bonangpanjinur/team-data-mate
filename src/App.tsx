@@ -83,6 +83,7 @@ const AppRoutes = () => (
     <Route path="/owner-invoices" element={<ProtectedRoute allowedRoles={["owner", "super_admin"]}><OwnerInvoices /></ProtectedRoute>} />
     <Route path="/owner-rates" element={<ProtectedRoute allowedRoles={["owner"]}><OwnerCommissionRates /></ProtectedRoute>} />
     <Route path="/financial-report" element={<ProtectedRoute allowedRoles={["owner", "super_admin"]}><FinancialReport /></ProtectedRoute>} />
+    <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
