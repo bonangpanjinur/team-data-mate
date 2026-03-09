@@ -179,19 +179,6 @@ export default function AppSettings() {
     toast({ title: "Hak akses berhasil disimpan" });
   };
 
-  const handleSaveRates = async () => {
-    setSavingRates(true);
-    for (const [r, amount] of Object.entries(rates)) {
-      await supabase
-        .from("commission_rates")
-        .upsert(
-          { role: r as any, amount_per_entry: amount, updated_at: new Date().toISOString() },
-          { onConflict: "role" }
-        );
-    }
-    setSavingRates(false);
-    toast({ title: "Tarif komisi berhasil disimpan" });
-  };
 
   if (role !== "super_admin") {
     return (
