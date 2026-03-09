@@ -17,7 +17,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify caller is super_admin
+    // Verify caller
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -36,11 +36,25 @@ serve(async (req) => {
       .eq("user_id", caller.id)
       .single();
 
-    if (callerRole?.role !== "super_admin") {
-      return new Response(JSON.stringify({ error: "Forbidden: not super_admin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Allow super_admin and owner to create users
+    if (callerRole?.role !== "super_admin" && callerRole?.role !== "owner") {
+      return new Response(JSON.stringify({ error: "Forbidden: insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { email, password, full_name, role } = await req.json();
+    const body = await req.json();
+    // Support both full_name and fullName for backwards compatibility
+    const email = body.email;
+    const password = body.password;
+    const full_name = body.full_name || body.fullName;
+    const role = body.role;
+
+    // Owner can only create team roles, not super_admin or owner
+    if (callerRole?.role === "owner") {
+      const allowedRoles = ["admin", "admin_input", "lapangan", "nib"];
+      if (!allowedRoles.includes(role)) {
+        return new Response(JSON.stringify({ error: "Owner hanya bisa membuat role: admin, admin_input, lapangan, nib" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
 
     // Create user via admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({

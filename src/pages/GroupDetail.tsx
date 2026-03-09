@@ -875,7 +875,7 @@ export default function GroupDetail() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant="outline" className="text-xs">{m.role?.replace("_", " ") ?? "-"}</Badge>
-                      {role === "super_admin" && (
+                      {(role === "super_admin" || role === "owner") && (
                         <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(m.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
