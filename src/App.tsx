@@ -26,6 +26,7 @@ import OwnerCommissionRates from "@/pages/OwnerCommissionRates";
 import FinancialReport from "@/pages/FinancialReport";
 import OwnerTeam from "@/pages/OwnerTeam";
 import OwnerFieldAccess from "@/pages/OwnerFieldAccess";
+import Notifications from "@/pages/Notifications";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
