@@ -50,7 +50,8 @@ export default function AppSettings() {
   const [savingAccess, setSavingAccess] = useState(false);
   const [savingRates, setSavingRates] = useState(false);
   const [savingSiapInput, setSavingSiapInput] = useState(false);
-
+  const [savingFee, setSavingFee] = useState(false);
+  const [certFee, setCertFee] = useState(0);
   // Siap Input required fields
   const [siapInputFields, setSiapInputFields] = useState<string[]>(["nama", "ktp", "nib", "foto_produk", "foto_verifikasi"]);
 
