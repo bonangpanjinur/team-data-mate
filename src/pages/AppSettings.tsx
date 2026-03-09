@@ -231,6 +231,124 @@ function OwnerPricingTab() {
   );
 }
 
+function OwnerQuotaTab() {
+  const [owners, setOwners] = useState<{ id: string; name: string }[]>([]);
+  const [quotas, setQuotas] = useState<{ id: string; owner_id: string; group_limit: number; owner_name?: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [selectedOwner, setSelectedOwner] = useState("");
+  const [groupLimit, setGroupLimit] = useState(10);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: ownerRoles } = await supabase.from("user_roles").select("user_id").eq("role", "owner");
+    if (ownerRoles && ownerRoles.length > 0) {
+      const ownerIds = ownerRoles.map((o) => o.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", ownerIds);
+      setOwners((profiles ?? []).map((p) => ({ id: p.id, name: p.full_name || p.email || "Unknown" })));
+    }
+    const { data: quotaData } = await (supabase as any).from("owner_quotas").select("*").order("created_at", { ascending: true });
+    setQuotas(quotaData ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const ownerName = (id: string) => owners.find(o => o.id === id)?.name || "Unknown";
+
+  const handleSave = async () => {
+    if (!selectedOwner) return;
+    setSaving(true);
+    const { error } = await (supabase as any).from("owner_quotas").upsert(
+      { owner_id: selectedOwner, group_limit: groupLimit, updated_at: new Date().toISOString() },
+      { onConflict: "owner_id" }
+    );
+    setSaving(false);
+    if (error) {
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Kuota berhasil disimpan" });
+      setSelectedOwner("");
+      setGroupLimit(10);
+      fetchData();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    await (supabase as any).from("owner_quotas").delete().eq("id", id);
+    toast({ title: "Kuota dihapus" });
+    fetchData();
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Package className="h-5 w-5" /> Kuota Group per Owner
+          </CardTitle>
+          <CardDescription>Batasi jumlah group yang bisa dibuat setiap owner</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Owner</Label>
+              <Select value={selectedOwner} onValueChange={setSelectedOwner}>
+                <SelectTrigger><SelectValue placeholder="Pilih owner" /></SelectTrigger>
+                <SelectContent>
+                  {owners.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Batas Group</Label>
+              <Input type="number" value={groupLimit} onChange={(e) => setGroupLimit(parseInt(e.target.value) || 0)} min={0} />
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={saving || !selectedOwner} className="w-full">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+            Simpan Kuota
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Daftar Kuota</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : quotas.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Belum ada kuota yang diatur (owner bisa buat unlimited)</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Owner</TableHead>
+                  <TableHead className="text-right">Batas Group</TableHead>
+                  <TableHead className="w-20">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quotas.map((q) => (
+                  <TableRow key={q.id}>
+                    <TableCell>{ownerName(q.owner_id)}</TableCell>
+                    <TableCell className="text-right font-mono">{q.group_limit}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(q.id)}>Hapus</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 const COLOR_PRESETS = [
   { label: "Biru Profesional", value: "217 91% 50%" },
   { label: "Hijau Halal", value: "142 71% 40%" },
