@@ -554,6 +554,7 @@ export type Database = {
         | "nib"
         | "admin_input"
         | "umkm"
+        | "owner"
       entry_status:
         | "belum_lengkap"
         | "siap_input"
@@ -698,6 +699,7 @@ export const Constants = {
         "nib",
         "admin_input",
         "umkm",
+        "owner",
       ],
       entry_status: [
         "belum_lengkap",
