@@ -191,6 +191,7 @@ export default function UsersManagement() {
                 <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="admin_input">Admin Input</SelectItem>
                     <SelectItem value="lapangan">Lapangan</SelectItem>
