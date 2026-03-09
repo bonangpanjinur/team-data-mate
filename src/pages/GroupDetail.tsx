@@ -198,10 +198,24 @@ export default function GroupDetail() {
   };
 
   const fetchAvailableUsers = async () => {
-    const { data: profiles } = await supabase.from("profiles").select("*");
+    let candidateProfiles: { id: string; email: string | null; full_name: string | null }[] = [];
+
+    if (role === "owner" && user) {
+      // Owner can only add their own team members
+      const { data: teamMembers } = await supabase.from("owner_teams").select("user_id").eq("owner_id", user.id);
+      if (teamMembers && teamMembers.length > 0) {
+        const teamUserIds = teamMembers.map((t) => t.user_id);
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", teamUserIds);
+        candidateProfiles = profiles ?? [];
+      }
+    } else {
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email");
+      candidateProfiles = profiles ?? [];
+    }
+
     const { data: existing } = await supabase.from("group_members").select("user_id").eq("group_id", groupId ?? "");
     const existingIds = new Set(existing?.map((e) => e.user_id));
-    setAvailableUsers((profiles ?? []).filter((p) => !existingIds.has(p.id)));
+    setAvailableUsers(candidateProfiles.filter((p) => !existingIds.has(p.id)));
   };
   const fetchUmkmUsers = async () => {
     const { data: roles } = await supabase
