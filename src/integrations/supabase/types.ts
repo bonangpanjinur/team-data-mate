@@ -422,6 +422,93 @@ export type Database = {
           },
         ]
       }
+      owner_field_access: {
+        Row: {
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          field_name: string
+          id: string
+          owner_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          field_name: string
+          id?: string
+          owner_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          field_name?: string
+          id?: string
+          owner_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      owner_pricing: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          owner_id: string | null
+          pricing_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          owner_id?: string | null
+          pricing_type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          owner_id?: string | null
+          pricing_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      owner_teams: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -536,6 +623,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_owner_id_for_user: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -549,6 +637,10 @@ export type Database = {
       }
       is_member_of_group: {
         Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_member_of_owner: {
+        Args: { _owner_id: string; _user_id: string }
         Returns: boolean
       }
     }
