@@ -412,7 +412,7 @@ export default function AppSettings() {
       <h1 className="text-2xl font-bold">Pengaturan</h1>
 
       <Tabs defaultValue="tampilan">
-        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-5">
+        <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6">
           <TabsTrigger value="tampilan" className="gap-1 text-xs sm:text-sm">
             <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tampilan</span><span className="sm:hidden">UI</span>
           </TabsTrigger>
@@ -427,6 +427,9 @@ export default function AppSettings() {
           </TabsTrigger>
           <TabsTrigger value="pricing" className="gap-1 text-xs sm:text-sm">
             <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Harga Owner</span><span className="sm:hidden">Owner</span>
+          </TabsTrigger>
+          <TabsTrigger value="kuota" className="gap-1 text-xs sm:text-sm">
+            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Kuota
           </TabsTrigger>
         </TabsList>
 
