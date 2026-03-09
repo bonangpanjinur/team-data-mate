@@ -306,7 +306,7 @@ export default function Komisi() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                     <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">Memuat...</TableCell>
+                     <TableCell colSpan={(isAdmin || isOwner) ? 7 : 6} className="text-center py-8 text-muted-foreground">Memuat...</TableCell>
                   </TableRow>
                 ) : commissions.length === 0 ? (
                   <TableRow>
