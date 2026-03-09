@@ -96,18 +96,6 @@ export default function AppSettings() {
     loadFee();
   }, []);
 
-  // Load commission rates
-  useEffect(() => {
-    const loadRates = async () => {
-      const { data } = await supabase.from("commission_rates").select("role, amount_per_entry");
-      if (data) {
-        const r: Record<string, number> = {};
-        data.forEach((row: any) => { r[row.role] = row.amount_per_entry; });
-        setRates(r);
-      }
-    };
-    loadRates();
-  }, []);
 
   useEffect(() => {
     document.documentElement.style.setProperty("--primary", primaryColor);
