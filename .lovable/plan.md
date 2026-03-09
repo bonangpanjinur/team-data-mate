@@ -1,29 +1,142 @@
+## Rencana: Sistem Multi-Tenant Owner dengan Isolasi Data
+
+### Pemahaman Bisnis
+
+```text
+SUPER ADMIN (Anda - Pemilik Platform)
+  ├── Membuat Owner (pelanggan yang menyewa)
+  ├── Set harga dinamis (per sertifikat / per group / custom per owner)
+  ├── Melihat semua laporan & tagihan dari semua owner
+  └── Pengaturan global platform
+
+OWNER (Pelanggan yang Menyewa)
+  ├── Punya proyek sendiri (groups) - TERISOLASI dari owner lain
+ - bisa buat group banyak, tergantung kuota dari super admin
+  ├── Kelola tim sendiri (admin, admin_input, nib, lapangan)
+  ├── Atur akses field per role di timnya
+  ├── Atur komisi tim sendiri
+  ├── Bayar tagihan ke platform
+  └── Lihat laporan keuangan sendiri
+
+TIM OWNER (admin, admin_input, nib, lapangan)
+  ├── Hanya akses data owner mereka
+  └── Dapat komisi dari owner mereka
+```
+
+&nbsp;
+
+### Perubahan Database
+
+**1. Tabel `owner_teams` (baru) - Hubungan tim ke owner:**
+
+```sql
+CREATE TABLE owner_teams (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL REFERENCES auth.users(id),
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(owner_id, user_id)
+);
+```
+
+**2. Tabel `owner_field_access` (baru) - Field access per owner:**
+
+```sql
+CREATE TABLE owner_field_access (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,
+  role app_role NOT NULL,
+  field_name text NOT NULL,
+  can_view boolean DEFAULT false,
+  can_edit boolean DEFAULT false,
+  UNIQUE(owner_id, role, field_name)
+);
+```
+
+**3. Tabel `owner_pricing` (baru) - Harga dinamis per owner:**
+
+```sql
+CREATE TABLE owner_pricing (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid, -- NULL = default global
+  pricing_type text NOT NULL, -- 'per_certificate', 'per_group', 'monthly', 'custom'
+  amount integer NOT NULL DEFAULT 0,
+  description text,
+  updated_at timestamptz DEFAULT now()
+);
+```
+
+**4. RLS untuk isolasi data:**
+
+- Tim hanya akses data groups yang `owner_id` = owner mereka
+- Owner hanya lihat tim, entries, dan groups miliknya
+- Super admin akses semua
+
+### Perubahan UI
+
+**1. Owner Bisa Buat Group:**
+
+- `Groups.tsx`: Owner bisa create/edit group (saat ini hanya super_admin)
+- Group otomatis di-assign ke owner yang membuat
+
+**2. Halaman Kelola Tim Owner (`/owner-team`):**
+
+- Owner buat user dengan role admin/admin_input/nib/lapangan
+- User otomatis terhubung ke owner tersebut
+- Tim tidak bisa akses owner lain
+
+**3. Halaman Akses Field Owner (`/owner-field-access`):**
+
+- Mirip tab Akses di AppSettings, tapi khusus untuk owner
+- Owner atur view/edit per field per role untuk timnya
+
+**4. Halaman Pricing (Super Admin):**
+
+- Tab baru di AppSettings: "Harga Owner"
+- Set harga default dan per-owner
+- Pilihan: per sertifikat, per group, bulanan, custom
+
+**5. Dashboard Terisolasi:**
+
+- Owner + tim hanya lihat data owner mereka
+- Query difilter berdasarkan owner context
+
+### File yang Diubah/Dibuat
 
 
-## Analisis Bug
+| File                             | Aksi                                                               |
+| -------------------------------- | ------------------------------------------------------------------ |
+| Migration SQL                    | Buat: owner_teams, owner_field_access, owner_pricing, RLS policies |
+| `src/contexts/AuthContext.tsx`   | Edit: tambah `ownerId` untuk tim (nullable)                        |
+| `src/hooks/useFieldAccess.ts`    | Edit: ambil field access dari owner jika user adalah tim           |
+| `src/pages/Groups.tsx`           | Edit: owner bisa buat group                                        |
+| `src/pages/Dashboard.tsx`        | Edit: filter data berdasarkan owner context                        |
+| `src/pages/OwnerTeam.tsx`        | Buat: owner kelola tim                                             |
+| `src/pages/OwnerFieldAccess.tsx` | Buat: owner atur akses field tim                                   |
+| `src/pages/AppSettings.tsx`      | Edit: tambah tab Harga Owner (super_admin)                         |
+| `src/components/AppLayout.tsx`   | Edit: tambah nav untuk owner (Kelola Tim, Akses Field)             |
+| `src/App.tsx`                    | Edit: tambah route baru                                            |
 
-### Bug 1: Delete user gagal (400 error)
-**Penyebab**: `data_entries` memiliki kolom `created_by`, `pic_user_id`, dan `umkm_user_id` yang mereferensikan user. Edge function `delete-user` tidak membersihkan referensi ini sebelum menghapus user dari `auth.users`, sehingga terjadi FK constraint error.
 
-Dari network request: user `b9e5d426-e264-4a35-b350-9954b0defadd` (Siti Admin Input) memiliki `data_entries` dengan `created_by` mengarah ke dia.
+### Alur Kerja
 
-**Fix**: Update `delete-user/index.ts` untuk nullify/delete referensi di `data_entries` (`created_by`, `pic_user_id`, `umkm_user_id`) dan `audit_logs` (`changed_by`) sebelum menghapus user.
+```text
+1. Super Admin buat Owner baru di Kelola User
+2. Super Admin set harga untuk owner tersebut (atau pakai default)
+3. Owner login -> buat tim (admin, admin_input, nib, lapangan)
+4. Owner atur akses field untuk setiap role
+5. Owner buat Group Halal
+6. Tim kerja -> data terisolasi per owner
+7. Sertifikat selesai -> invoice ke owner
+8. Owner bayar -> super admin konfirmasi
+```
 
-### Bug 2: User baru tidak muncul di list
-**Penyebab**: `fetchUsers()` dipanggil langsung setelah `create-user` berhasil, tapi profile dibuat oleh trigger `handle_new_user` yang mungkin belum selesai. Juga, `supabase.functions.invoke` tidak throw error pada non-2xx - perlu cek `data.error` juga. Selain itu, perlu delay kecil sebelum fetch.
+### Prioritas Implementasi
 
-**Fix**: Tambah delay kecil (500ms) sebelum `fetchUsers()` setelah create, agar trigger database punya waktu membuat profile.
-
-### Rencana Implementasi
-
-**File 1: `supabase/functions/delete-user/index.ts`**
-- Tambah nullify `data_entries.created_by`, `data_entries.pic_user_id`, `data_entries.umkm_user_id` sebelum delete
-- Tambah nullify `audit_logs.changed_by`
-- Tambah delete `entry_photos` terkait entries user
-- Tambah error logging yang lebih detail
-
-**File 2: `src/pages/UsersManagement.tsx`**
-- Tambah delay sebelum `fetchUsers()` setelah create user berhasil
-- Fix error handling pada `handleDelete` (cek `data?.error` juga)
-- Tambah `DialogDescription` untuk fix warning
-
+1. **Database**: owner_teams, owner_field_access, owner_pricing + RLS
+2. **Context**: Tambah ownerId ke AuthContext
+3. **Owner Team Management**: Halaman kelola tim
+4. **Owner Field Access**: Halaman atur akses
+5. **Group Creation**: Owner bisa buat group
+6. **Dashboard Isolation**: Filter data per owner
+7. **Dynamic Pricing**: Super admin set harga per owner
