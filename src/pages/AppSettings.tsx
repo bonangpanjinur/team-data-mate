@@ -54,15 +54,6 @@ export default function AppSettings() {
   // Siap Input required fields
   const [siapInputFields, setSiapInputFields] = useState<string[]>(["nama", "ktp", "nib", "foto_produk", "foto_verifikasi"]);
 
-  // Commission rates
-  const [rates, setRates] = useState<Record<string, number>>({
-    super_admin: 0,
-    admin: 5000,
-    admin_input: 0,
-    lapangan: 10000,
-    nib: 5000,
-  });
-
   const { allAccess, loading: accessLoading, refetch: refetchAccess } = useAllFieldAccess();
 
   // Local editable copy of field access
