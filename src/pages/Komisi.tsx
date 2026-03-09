@@ -310,7 +310,7 @@ export default function Komisi() {
                   </TableRow>
                 ) : commissions.length === 0 ? (
                   <TableRow>
-                     <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                     <TableCell colSpan={(isAdmin || isOwner) ? 7 : 6} className="text-center py-8 text-muted-foreground">
                        Belum ada komisi{selectedPeriod !== "all" ? ` untuk periode ${selectedPeriod}` : ""}
                      </TableCell>
                   </TableRow>
