@@ -40,6 +40,28 @@ export default function Groups() {
     if (!user) return;
     setCreating(true);
 
+    // Check quota for owner
+    if (role === "owner") {
+      const { data: quota } = await (supabase as any)
+        .from("owner_quotas")
+        .select("group_limit")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      
+      if (quota) {
+        const { count } = await supabase
+          .from("groups")
+          .select("*", { count: "exact", head: true })
+          .eq("owner_id", user.id);
+        
+        if ((count ?? 0) >= quota.group_limit) {
+          setCreating(false);
+          toast({ title: "Kuota habis", description: `Anda hanya bisa membuat maksimal ${quota.group_limit} group. Hubungi admin untuk menambah kuota.`, variant: "destructive" });
+          return;
+        }
+      }
+    }
+
     // If owner is creating, set owner_id to themselves
     const insertData: any = { name: newName, created_by: user.id };
     if (role === "owner") {
