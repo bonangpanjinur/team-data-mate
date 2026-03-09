@@ -228,7 +228,7 @@ export default function AppSettings() {
       <h1 className="text-2xl font-bold">Pengaturan</h1>
 
       <Tabs defaultValue="tampilan">
-        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-5">
+        <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="tampilan" className="gap-1 text-xs sm:text-sm">
             <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tampilan</span><span className="sm:hidden">UI</span>
           </TabsTrigger>
@@ -237,9 +237,6 @@ export default function AppSettings() {
           </TabsTrigger>
           <TabsTrigger value="siap_input" className="gap-1 text-xs sm:text-sm">
             <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Siap Input</span><span className="sm:hidden">Input</span>
-          </TabsTrigger>
-          <TabsTrigger value="komisi" className="gap-1 text-xs sm:text-sm">
-            <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Komisi
           </TabsTrigger>
           <TabsTrigger value="tarif" className="gap-1 text-xs sm:text-sm">
             <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Tarif Sertifikat</span><span className="sm:hidden">Tarif</span>
