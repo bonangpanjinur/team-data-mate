@@ -94,7 +94,7 @@ export default function Komisi() {
   };
 
   const fetchUsers = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isOwner) return;
     const { data } = await supabase.from("profiles").select("id, full_name, email");
     setUsers(data ?? []);
   };
