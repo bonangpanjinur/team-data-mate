@@ -461,8 +461,12 @@ export default function AppSettings() {
             className="w-full gap-2"
           >
             {savingFee ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Simpan Tarif Sertifikat
+          Simpan Tarif Sertifikat
           </Button>
+        </TabsContent>
+
+        <TabsContent value="pricing" className="space-y-6 mt-4">
+          <OwnerPricingTab />
         </TabsContent>
       </Tabs>
     </div>
