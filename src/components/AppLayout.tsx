@@ -31,6 +31,8 @@ const NAV_ITEMS = {
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
     { label: "Komisi", icon: Wallet, path: "/komisi" },
+    { label: "Tagihan Owner", icon: FileText, path: "/owner-invoices" },
+    { label: "Laporan", icon: BarChart3, path: "/financial-report" },
     { label: "Pengaturan", icon: Settings, path: "/settings" },
   ],
   admin: [
