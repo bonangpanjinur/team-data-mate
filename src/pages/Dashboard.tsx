@@ -245,6 +245,7 @@ export default function Dashboard() {
       }
     };
     fetchFinancial();
+  }, [role]);
 
   // Admin performance stats for super_admin
   useEffect(() => {
