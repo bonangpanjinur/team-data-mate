@@ -9,7 +9,7 @@ export interface FieldAccess {
 }
 
 export function useFieldAccess(targetRole?: string) {
-  const { role } = useAuth();
+  const { role, ownerId } = useAuth();
   const [fields, setFields] = useState<FieldAccess[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,8 +23,27 @@ export function useFieldAccess(targetRole?: string) {
       setLoading(false);
       return;
     }
-    const fetch = async () => {
+
+    const fetchAccess = async () => {
       setLoading(true);
+
+      // If user has an owner (team member or owner themselves), use owner_field_access
+      if (ownerId) {
+        const { data: ownerAccess } = await supabase
+          .from("owner_field_access")
+          .select("field_name, can_view, can_edit")
+          .eq("owner_id", ownerId)
+          .eq("role", effectiveRole as any);
+
+        // If owner has custom settings, use those
+        if (ownerAccess && ownerAccess.length > 0) {
+          setFields(ownerAccess as FieldAccess[]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fallback to global field_access (default settings)
       const { data } = await supabase
         .from("field_access")
         .select("field_name, can_view, can_edit")
@@ -32,8 +51,9 @@ export function useFieldAccess(targetRole?: string) {
       setFields((data as FieldAccess[]) ?? []);
       setLoading(false);
     };
-    fetch();
-  }, [effectiveRole]);
+
+    fetchAccess();
+  }, [effectiveRole, ownerId]);
 
   const canView = (field: string) => {
     if (isSuperRole) return true;
@@ -86,4 +106,40 @@ export function useAllFieldAccess() {
     };
     fetch();
   }};
+}
+
+// Hook for owner to manage their team's field access
+export function useOwnerFieldAccess(ownerIdParam?: string) {
+  const { user, ownerId: contextOwnerId } = useAuth();
+  const [allAccess, setAllAccess] = useState<Record<string, FieldAccess[]>>({});
+  const [loading, setLoading] = useState(true);
+
+  const effectiveOwnerId = ownerIdParam || contextOwnerId || user?.id;
+
+  const fetchAccess = async () => {
+    if (!effectiveOwnerId) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("owner_field_access")
+      .select("*")
+      .eq("owner_id", effectiveOwnerId);
+    
+    const grouped: Record<string, FieldAccess[]> = {};
+    (data ?? []).forEach((row: any) => {
+      if (!grouped[row.role]) grouped[row.role] = [];
+      grouped[row.role].push({
+        field_name: row.field_name,
+        can_view: row.can_view,
+        can_edit: row.can_edit,
+      });
+    });
+    setAllAccess(grouped);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchAccess();
+  }, [effectiveOwnerId]);
+
+  return { allAccess, loading, refetch: fetchAccess, ownerId: effectiveOwnerId };
 }

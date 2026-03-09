@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: AppRole | null;
+  ownerId: string | null; // For team members, this is their owner's ID
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   role: null,
+  ownerId: null,
   loading: true,
   signOut: async () => {},
 });
@@ -27,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (userId: string) => {
@@ -36,6 +39,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq("user_id", userId)
       .single();
     setRole(data?.role ?? null);
+    return data?.role ?? null;
+  };
+
+  const fetchOwnerId = async (userId: string, userRole: AppRole | null) => {
+    // If user is owner, their ownerId is themselves
+    if (userRole === "owner") {
+      setOwnerId(userId);
+      return;
+    }
+    // If user is super_admin or umkm, no owner context
+    if (userRole === "super_admin" || userRole === "umkm" || !userRole) {
+      setOwnerId(null);
+      return;
+    }
+    // For team members (admin, admin_input, lapangan, nib), get their owner
+    const { data } = await supabase
+      .from("owner_teams")
+      .select("owner_id")
+      .eq("user_id", userId)
+      .single();
+    setOwnerId(data?.owner_id ?? null);
   };
 
   useEffect(() => {
@@ -44,19 +68,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchRole(session.user.id), 0);
+          setTimeout(async () => {
+            const userRole = await fetchRole(session.user.id);
+            await fetchOwnerId(session.user.id, userRole);
+          }, 0);
         } else {
           setRole(null);
+          setOwnerId(null);
         }
         setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRole(session.user.id);
+        const userRole = await fetchRole(session.user.id);
+        await fetchOwnerId(session.user.id, userRole);
       }
       setLoading(false);
     });
@@ -69,10 +98,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setRole(null);
+    setOwnerId(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, ownerId, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
