@@ -27,6 +27,7 @@ import FinancialReport from "@/pages/FinancialReport";
 import OwnerTeam from "@/pages/OwnerTeam";
 import OwnerFieldAccess from "@/pages/OwnerFieldAccess";
 import Notifications from "@/pages/Notifications";
+import OwnerSummary from "@/pages/OwnerSummary";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
