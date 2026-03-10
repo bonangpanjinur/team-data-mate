@@ -55,6 +55,7 @@ const NAV_ITEMS = {
   ],
   owner: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { label: "Ringkasan", icon: BarChart3, path: "/owner-summary" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
     { label: "Notifikasi", icon: Bell, path: "/notifications" },

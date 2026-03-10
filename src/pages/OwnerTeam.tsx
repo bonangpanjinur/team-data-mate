@@ -41,6 +41,7 @@ export default function OwnerTeam() {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TeamMember | null>(null);
+  const [changingRole, setChangingRole] = useState<string | null>(null);
 
   // Form state
   const [email, setEmail] = useState("");
@@ -94,7 +95,6 @@ export default function OwnerTeam() {
     setCreating(true);
 
     try {
-      // Create user via edge function
       const { data, error } = await supabase.functions.invoke("create-user", {
         body: { email, password, fullName, role: selectedRole },
       });
@@ -106,7 +106,6 @@ export default function OwnerTeam() {
       const newUserId = data.user?.id;
       if (!newUserId) throw new Error("User ID tidak ditemukan");
 
-      // Add to owner_teams
       const { error: teamError } = await supabase
         .from("owner_teams")
         .insert({ owner_id: user.id, user_id: newUserId });
@@ -123,7 +122,6 @@ export default function OwnerTeam() {
       setFullName("");
       setSelectedRole("admin");
       
-      // Small delay to let triggers complete
       setTimeout(fetchTeam, 500);
     } catch (err: any) {
       toast({ title: "Gagal", description: err.message, variant: "destructive" });
@@ -132,10 +130,28 @@ export default function OwnerTeam() {
     setCreating(false);
   };
 
+  const handleChangeRole = async (member: TeamMember, newRole: AppRole) => {
+    setChangingRole(member.user_id);
+    try {
+      const { data, error } = await supabase.functions.invoke("update-user-role", {
+        body: { user_id: member.user_id, new_role: newRole },
+      });
+
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || "Gagal mengubah role");
+      }
+
+      toast({ title: "Role berhasil diubah" });
+      fetchTeam();
+    } catch (err: any) {
+      toast({ title: "Gagal mengubah role", description: err.message, variant: "destructive" });
+    }
+    setChangingRole(null);
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
 
-    // Remove from owner_teams (not deleting the user, just removing from team)
     const { error } = await supabase
       .from("owner_teams")
       .delete()
@@ -185,45 +201,23 @@ export default function OwnerTeam() {
             <form onSubmit={handleCreateMember} className="space-y-4">
               <div className="space-y-2">
                 <Label>Nama Lengkap</Label>
-                <Input
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Nama lengkap"
-                  required
-                />
+                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nama lengkap" required />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@contoh.com"
-                  required
-                />
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@contoh.com" required />
               </div>
               <div className="space-y-2">
                 <Label>Password</Label>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min 6 karakter"
-                  minLength={6}
-                  required
-                />
+                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 karakter" minLength={6} required />
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>
                 <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {TEAM_ROLES.map((r) => (
-                      <SelectItem key={r.key} value={r.key}>
-                        {r.label}
-                      </SelectItem>
+                      <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -242,9 +236,7 @@ export default function OwnerTeam() {
       <Card>
         <CardHeader>
           <CardTitle>Anggota Tim ({teamMembers.length})</CardTitle>
-          <CardDescription>
-            Semua anggota tim yang terdaftar di bawah Anda
-          </CardDescription>
+          <CardDescription>Semua anggota tim yang terdaftar di bawah Anda</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -274,19 +266,30 @@ export default function OwnerTeam() {
                     </TableCell>
                     <TableCell>{member.profile?.email || "-"}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="capitalize">
-                        {member.role?.replace("_", " ") || "-"}
-                      </Badge>
+                      <Select
+                        value={member.role || ""}
+                        onValueChange={(v) => handleChangeRole(member, v as AppRole)}
+                        disabled={changingRole === member.user_id}
+                      >
+                        <SelectTrigger className="w-[140px] h-8">
+                          {changingRole === member.user_id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <SelectValue />
+                          )}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TEAM_ROLES.map((r) => (
+                            <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {new Date(member.created_at).toLocaleDateString("id-ID")}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteTarget(member)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(member)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
@@ -303,7 +306,7 @@ export default function OwnerTeam() {
           <DialogHeader>
             <DialogTitle>Hapus dari Tim?</DialogTitle>
             <DialogDescription>
-              Anggota "{deleteTarget?.profile?.full_name || deleteTarget?.profile?.email}" akan dihapus dari tim Anda. 
+              Anggota "{deleteTarget?.profile?.full_name || deleteTarget?.profile?.email}" akan dihapus dari tim Anda.
               Akun mereka tetap ada, tapi tidak bisa mengakses data Anda lagi.
             </DialogDescription>
           </DialogHeader>
