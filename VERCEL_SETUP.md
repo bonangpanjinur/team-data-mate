@@ -113,3 +113,37 @@ Secara default, Supabase mewajibkan user untuk melakukan konfirmasi email setela
 6.  Klik **Save**.
 
 Setelah ini, setiap user yang mendaftar melalui halaman `/register` di aplikasi akan bisa langsung login tanpa perlu membuka email konfirmasi.
+
+## Deployment Edge Functions (Penting untuk Fitur Admin)
+
+Jika Anda mendapatkan error "Failed to send a request to the Edge Function" saat membuat user atau mendownload data, itu berarti Edge Functions belum di-deploy ke Supabase.
+
+### Langkah-langkah Deployment:
+
+1.  **Instal Supabase CLI** di komputer lokal Anda:
+    ```bash
+    npm install -g supabase
+    ```
+2.  **Login ke Supabase**:
+    ```bash
+    supabase login
+    ```
+3.  **Inisialisasi Link ke Project**:
+    Dapatkan Project ID dari URL dashboard Supabase Anda (misal: `mwdecebkfhcqynxczdjx`).
+    ```bash
+    supabase link --project-ref <PROJECT_ID>
+    ```
+4.  **Deploy Semua Functions**:
+    ```bash
+    supabase functions deploy
+    ```
+
+### Daftar Functions yang Harus Ada:
+- `create-user` (Untuk membuat user baru oleh admin)
+- `delete-user` (Untuk menghapus user)
+- `update-user-role` (Untuk mengubah role user)
+- `download-entries` (Untuk export data)
+- `reset-password`
+- `setup-admin`
+
+**Catatan**: Edge Functions memerlukan `SUPABASE_SERVICE_ROLE_KEY` untuk beroperasi. Biasanya ini sudah terkonfigurasi otomatis saat di-deploy, namun pastikan di dashboard Supabase bagian **Edge Functions > [Nama Function] > Details** tidak ada error terkait environment variables.
