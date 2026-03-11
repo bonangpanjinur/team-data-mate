@@ -127,6 +127,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -143,8 +144,11 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_groups_updated_at ON public.groups;
 CREATE TRIGGER update_groups_updated_at BEFORE UPDATE ON public.groups FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+DROP TRIGGER IF EXISTS update_data_entries_updated_at ON public.data_entries;
 CREATE TRIGGER update_data_entries_updated_at BEFORE UPDATE ON public.data_entries FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- ============ RLS POLICIES ============
@@ -271,6 +275,7 @@ END;
 $$;
 
 -- Trigger pada data_entries
+DROP TRIGGER IF EXISTS trigger_log_status_change ON public.data_entries;
 CREATE TRIGGER trigger_log_status_change
 AFTER UPDATE ON public.data_entries
 FOR EACH ROW
@@ -348,6 +353,7 @@ END;
 $$;
 
 -- 4. Trigger to auto-generate tracking code on INSERT
+DROP TRIGGER IF EXISTS trg_generate_tracking_code ON public.data_entries;
 CREATE TRIGGER trg_generate_tracking_code
   BEFORE INSERT ON public.data_entries
   FOR EACH ROW
@@ -380,6 +386,7 @@ END;
 $$;
 
 -- 6. Trigger for auto status update (BEFORE the existing log_status_change trigger)
+DROP TRIGGER IF EXISTS trg_auto_update_status ON public.data_entries;
 CREATE TRIGGER trg_auto_update_status
   BEFORE UPDATE ON public.data_entries
   FOR EACH ROW
@@ -427,6 +434,7 @@ CREATE POLICY "Public can view entries by tracking code" ON public.data_entries
 DROP TRIGGER IF EXISTS update_data_entries_updated_at ON public.data_entries;
 
 -- Re-create it
+DROP TRIGGER IF EXISTS update_data_entries_updated_at ON public.data_entries;
 CREATE TRIGGER update_data_entries_updated_at
   BEFORE UPDATE ON public.data_entries
   FOR EACH ROW
@@ -521,6 +529,7 @@ CREATE POLICY "Users can manage own shared links"
 -- File: 20260228155624_7fb3f72a-8757-4d32-bdc2-05fc57ee3dde.sql
 
 -- 1. Attach handle_new_user() trigger to auth.users
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
@@ -587,6 +596,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS generate_slug_on_insert ON public.shared_links;
 CREATE TRIGGER generate_slug_on_insert
   BEFORE INSERT ON public.shared_links
   FOR EACH ROW
@@ -717,6 +727,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS auto_commission_on_entry ON public.data_entries;
 CREATE TRIGGER auto_commission_on_entry
   AFTER INSERT ON public.data_entries
   FOR EACH ROW
@@ -736,6 +747,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS validate_commission_status_trigger ON public.commissions;
 CREATE TRIGGER validate_commission_status_trigger
   BEFORE INSERT OR UPDATE ON public.commissions
   FOR EACH ROW
@@ -755,6 +767,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS validate_disbursement_status_trigger ON public.disbursements;
 CREATE TRIGGER validate_disbursement_status_trigger
   BEFORE INSERT OR UPDATE ON public.disbursements
   FOR EACH ROW
@@ -809,6 +822,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS deactivate_shared_links_on_group_delete ON public.groups;
 CREATE TRIGGER deactivate_shared_links_on_group_delete
   BEFORE DELETE ON public.groups
   FOR EACH ROW
@@ -946,6 +960,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS validate_entry_photo_type ON public.entry_photos;
 CREATE TRIGGER validate_entry_photo_type
 BEFORE INSERT OR UPDATE ON public.entry_photos
 FOR EACH ROW EXECUTE FUNCTION public.validate_photo_type();
@@ -1038,7 +1053,8 @@ USING (has_role(auth.uid(), 'umkm'::app_role) AND umkm_user_id = auth.uid());
 
 
 -- File: 20260304221437_393c2a05-fe65-42d4-bc2a-ae3b03c1374f.sql
--- Create trigger to auto-assign umkm role on signup via metadata flag
+-- DROP TRIGGER IF EXISTS to ON signup;
+Create trigger to auto-assign umkm role on signup via metadata flag
 CREATE OR REPLACE FUNCTION public.auto_assign_umkm_role()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -1057,6 +1073,7 @@ $$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created_assign_umkm ON auth.users;
 
+DROP TRIGGER IF EXISTS on_auth_user_created_assign_umkm ON auth.users;
 CREATE TRIGGER on_auth_user_created_assign_umkm
   AFTER INSERT ON auth.users
   FOR EACH ROW
@@ -1123,6 +1140,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS on_entry_status_change_notify_umkm ON public.data_entries;
 CREATE TRIGGER on_entry_status_change_notify_umkm
   AFTER UPDATE ON public.data_entries
   FOR EACH ROW
@@ -1177,6 +1195,7 @@ BEGIN
 END $$;
 
 -- Create the trigger
+DROP TRIGGER IF EXISTS trg_commission_on_status_change ON public.data_entries;
 DROP TRIGGER IF EXISTS trg_commission_on_status_change ON public.data_entries;
 CREATE TRIGGER trg_commission_on_status_change
   AFTER UPDATE ON public.data_entries
@@ -1315,6 +1334,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS auto_create_owner_invoice_trigger ON public.data_entries;
 CREATE TRIGGER auto_create_owner_invoice_trigger
   AFTER UPDATE ON public.data_entries
   FOR EACH ROW EXECUTE FUNCTION public.auto_create_owner_invoice();
@@ -1612,10 +1632,12 @@ VALUES
   (NULL, 'per_certificate', 0, 'Tarif default per sertifikat', true);
 
 -- Trigger for updated_at on new tables
+DROP TRIGGER IF EXISTS update_owner_field_access_updated_at ON public.owner_field_access;
 CREATE TRIGGER update_owner_field_access_updated_at
 BEFORE UPDATE ON public.owner_field_access
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_owner_pricing_updated_at ON public.owner_pricing;
 CREATE TRIGGER update_owner_pricing_updated_at
 BEFORE UPDATE ON public.owner_pricing
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -1624,6 +1646,7 @@ FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 -- File: 20260309042346_9aeda581-b664-48f7-b887-e8b79208484d.sql
 
 -- Fix: trigger already existed, just ensure it's there
+DROP TRIGGER IF EXISTS auto_create_owner_invoice_trigger ON public.data_entries;
 DROP TRIGGER IF EXISTS auto_create_owner_invoice_trigger ON public.data_entries;
 CREATE TRIGGER auto_create_owner_invoice_trigger AFTER UPDATE ON public.data_entries FOR EACH ROW EXECUTE FUNCTION public.auto_create_owner_invoice();
 
@@ -1725,10 +1748,12 @@ TO authenticated
 USING (owner_id = auth.uid());
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_certificate_fees_updated_at ON public.certificate_fees;
 CREATE TRIGGER update_certificate_fees_updated_at
 BEFORE UPDATE ON public.certificate_fees
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_owner_invoices_updated_at ON public.owner_invoices;
 CREATE TRIGGER update_owner_invoices_updated_at
 BEFORE UPDATE ON public.owner_invoices
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
