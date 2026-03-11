@@ -41,12 +41,22 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden: insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Support both full_name and fullName for backwards compatibility
     const email = body.email;
     const password = body.password;
     const full_name = body.full_name || body.fullName;
     const role = body.role;
+
+    if (!email || !password || !role) {
+      return new Response(JSON.stringify({ error: "Email, password, and role are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Owner can only create team roles, not super_admin or owner
     if (callerRole?.role === "owner") {
@@ -57,33 +67,43 @@ serve(async (req) => {
     }
 
     // Create user via admin API
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { full_name },
     });
 
-    if (createError) {
-      console.error("Error creating user:", createError.message);
-      return new Response(JSON.stringify({ error: createError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (createError || !createData?.user) {
+      console.error("Error creating user:", createError?.message || "User data is null");
+      return new Response(JSON.stringify({ error: createError?.message || "Gagal membuat user di sistem autentikasi" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const newUser = createData.user;
+
     // Create profile explicitly
-    await supabaseAdmin
+    const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .upsert({ id: newUser.user.id, email, full_name, updated_at: new Date().toISOString() });
+      .upsert({ id: newUser.id, email, full_name, updated_at: new Date().toISOString() });
+
+    if (profileError) {
+      console.error("Error creating profile:", profileError.message);
+      // We might want to delete the auth user if profile creation fails, 
+      // but for now let's just return the error
+      return new Response(JSON.stringify({ error: "Gagal membuat profil user: " + profileError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Assign role
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
-      .insert({ user_id: newUser.user.id, role });
+      .insert({ user_id: newUser.id, role });
 
     if (roleError) {
-      return new Response(JSON.stringify({ error: roleError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.error("Error assigning role:", roleError.message);
+      return new Response(JSON.stringify({ error: "Gagal memberikan role: " + roleError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ user: { id: newUser.user.id, email } }), {
+    return new Response(JSON.stringify({ user: { id: newUser.id, email } }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

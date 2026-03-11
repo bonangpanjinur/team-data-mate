@@ -43,7 +43,17 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     }
 
-    const { user_id } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const { user_id } = body;
+
+    if (!user_id) {
+      return new Response(JSON.stringify({ error: "Missing user_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Nullify references in data_entries to avoid FK constraint errors
     await supabaseAdmin.from("data_entries").update({ created_by: null }).eq("created_by", user_id);

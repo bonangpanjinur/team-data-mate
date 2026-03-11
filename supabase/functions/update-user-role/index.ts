@@ -35,7 +35,12 @@ serve(async (req) => {
       .eq("user_id", caller.id)
       .single();
 
-    const { user_id, new_role } = await req.json();
+    const body = await req.json();
+    const { user_id, new_role } = body;
+
+    if (!user_id || !new_role) {
+      return new Response(JSON.stringify({ error: "Missing user_id or new_role" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     if (callerRole?.role === "owner") {
       // Verify user is in owner's team

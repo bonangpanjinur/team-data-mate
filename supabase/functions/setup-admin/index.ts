@@ -33,26 +33,28 @@ serve(async (req) => {
 
     const { email, password, full_name } = await req.json();
 
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { full_name },
     });
 
-    if (createError) {
-      return new Response(JSON.stringify({ error: createError.message }), { status: 400, headers: corsHeaders });
+    if (createError || !createData?.user) {
+      return new Response(JSON.stringify({ error: createError?.message || "Gagal membuat user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    const newUser = createData.user;
 
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
-      .insert({ user_id: newUser.user.id, role: "super_admin" });
+      .insert({ user_id: newUser.id, role: "super_admin" });
 
     if (roleError) {
-      return new Response(JSON.stringify({ error: roleError.message }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: roleError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ success: true, user_id: newUser.user.id }), {
+    return new Response(JSON.stringify({ success: true, user_id: newUser.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
