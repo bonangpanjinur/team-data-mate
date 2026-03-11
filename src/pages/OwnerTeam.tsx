@@ -8,9 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Users, Loader2 } from "lucide-react";
+import { Plus, Trash2, Users, Loader2, KeyRound } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -42,6 +41,9 @@ export default function OwnerTeam() {
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TeamMember | null>(null);
   const [changingRole, setChangingRole] = useState<string | null>(null);
+  const [resetTarget, setResetTarget] = useState<TeamMember | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   // Form state
   const [email, setEmail] = useState("");
@@ -147,6 +149,29 @@ export default function OwnerTeam() {
       toast({ title: "Gagal mengubah role", description: err.message, variant: "destructive" });
     }
     setChangingRole(null);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetTarget || !newPassword) return;
+    setResettingPassword(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("reset-password", {
+        body: { user_id: resetTarget.user_id, new_password: newPassword },
+      });
+
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || "Gagal reset password");
+      }
+
+      toast({ title: "Password berhasil diubah" });
+      setResetTarget(null);
+      setNewPassword("");
+    } catch (err: any) {
+      toast({ title: "Gagal reset password", description: err.message, variant: "destructive" });
+    }
+
+    setResettingPassword(false);
   };
 
   const handleDelete = async () => {
@@ -255,7 +280,7 @@ export default function OwnerTeam() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Bergabung</TableHead>
-                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -289,9 +314,14 @@ export default function OwnerTeam() {
                       {new Date(member.created_at).toLocaleDateString("id-ID")}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(member)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setResetTarget(member)} title="Reset Password">
+                          <KeyRound className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(member)} title="Hapus dari Tim">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -301,6 +331,7 @@ export default function OwnerTeam() {
         </CardContent>
       </Card>
 
+      {/* Delete Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
@@ -313,6 +344,37 @@ export default function OwnerTeam() {
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
             <Button variant="destructive" onClick={handleDelete}>Hapus dari Tim</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetTarget} onOpenChange={(o) => { if (!o) { setResetTarget(null); setNewPassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Ganti password untuk "{resetTarget?.profile?.full_name || resetTarget?.profile?.email}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Password Baru</Label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min 6 karakter"
+                minLength={6}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setResetTarget(null); setNewPassword(""); }}>Batal</Button>
+            <Button onClick={handleResetPassword} disabled={resettingPassword || newPassword.length < 6}>
+              {resettingPassword ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {resettingPassword ? "Menyimpan..." : "Simpan Password"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

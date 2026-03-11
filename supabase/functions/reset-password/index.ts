@@ -36,11 +36,27 @@ serve(async (req) => {
       .eq("user_id", caller.id)
       .single();
 
-    if (callerRole?.role !== "super_admin") {
-      return new Response(JSON.stringify({ error: "Forbidden: not super_admin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (callerRole?.role !== "super_admin" && callerRole?.role !== "owner") {
+      return new Response(JSON.stringify({ error: "Forbidden: insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const { user_id, new_password } = await req.json();
+
+    // Owner can only reset password for their own team members
+    if (callerRole?.role === "owner") {
+      const { data: teamMember } = await supabaseAdmin
+        .from("owner_teams")
+        .select("id")
+        .eq("owner_id", caller.id)
+        .eq("user_id", user_id)
+        .single();
+
+      if (!teamMember) {
+        return new Response(JSON.stringify({ error: "User bukan anggota tim Anda" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // user_id and new_password already parsed above for owner check
 
     if (!user_id || !new_password) {
       return new Response(JSON.stringify({ error: "user_id and new_password are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
