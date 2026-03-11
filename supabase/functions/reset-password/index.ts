@@ -56,7 +56,7 @@ serve(async (req) => {
       }
     }
 
-    const { user_id, new_password } = await req.json();
+    // user_id and new_password already parsed above for owner check
 
     if (!user_id || !new_password) {
       return new Response(JSON.stringify({ error: "user_id and new_password are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
