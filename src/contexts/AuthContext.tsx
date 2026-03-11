@@ -130,6 +130,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (!isMounted) return;
 
+      // Skip redundant SIGNED_IN if we already have a session from initialize()
+      if (event === "SIGNED_IN" && session?.user?.id === currentSession?.user?.id) {
+        return;
+      }
+
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);

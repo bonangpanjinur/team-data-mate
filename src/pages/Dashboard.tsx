@@ -256,8 +256,23 @@ export default function Dashboard() {
     
     const fetchFinancial = async () => {
       try {
-        // Get all invoices
-        const { data: invoices } = await (supabase as any).from("owner_invoices").select("amount, status, period, owner_id");
+        // Get all invoices - handle potential 404 if table doesn't exist yet
+        const { data: invoices, error: invoiceError } = await (supabase as any)
+          .from("owner_invoices")
+          .select("amount, status, period, owner_id");
+        
+        if (invoiceError) {
+          if (invoiceError.code === "PGRST116" || invoiceError.message?.includes("not found")) {
+            console.warn("[Dashboard] Table 'owner_invoices' not found. Skipping financial stats.");
+          } else {
+            console.error("[Dashboard] Error fetching invoices:", invoiceError.message);
+          }
+          // Still fetch cert count even if invoices fail
+          const { count: certCount } = await supabase.from("data_entries").select("id", { count: "exact", head: true }).eq("status", "sertifikat_selesai");
+          setFinancialStats(prev => ({ ...prev, totalCerts: certCount ?? 0 }));
+          return;
+        }
+
         if (invoices) {
           const totalPaid = invoices.filter((i: any) => i.status === "paid").reduce((s: number, i: any) => s + (i.amount || 0), 0);
           const totalPending = invoices.filter((i: any) => i.status === "pending").reduce((s: number, i: any) => s + (i.amount || 0), 0);
@@ -281,7 +296,7 @@ export default function Dashboard() {
           setFinancialStats({ totalPaid, totalPending, activeOwners, totalCerts: certCount ?? 0 });
         }
       } catch (err) {
-        console.error("[Dashboard] Error fetching financial data:", err);
+        console.error("[Dashboard] Unexpected error in fetchFinancial:", err);
       }
     };
     
