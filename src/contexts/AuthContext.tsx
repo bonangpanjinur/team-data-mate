@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -31,6 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Use ref to track if component is mounted and prevent stale updates
+  const isMountedRef = useRef(true);
 
   const fetchRoleAndOwner = useCallback(async (userId: string) => {
     try {
@@ -79,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    isMountedRef.current = true;
 
     const initialize = async () => {
       try {
@@ -95,21 +99,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(initialSession);
           setUser(initialSession.user);
           
+          // Fetch role and owner in parallel
           const { role: userRole, ownerId: userOwnerId } = await fetchRoleAndOwner(initialSession.user.id);
           
           if (isMounted) {
             setRole(userRole);
             setOwnerId(userOwnerId);
+            setLoading(false);
           }
         } else {
           setSession(null);
           setUser(null);
           setRole(null);
           setOwnerId(null);
+          setLoading(false);
         }
       } catch (err) {
         console.error("[AuthContext] Initialization failed:", err);
-      } finally {
         if (isMounted) {
           setLoading(false);
         }
@@ -147,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       isMounted = false;
+      isMountedRef.current = false;
       subscription.unsubscribe();
     };
   }, [fetchRoleAndOwner]);
@@ -157,10 +164,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("[AuthContext] Sign out error:", err);
     } finally {
-      setUser(null);
-      setSession(null);
-      setRole(null);
-      setOwnerId(null);
+      if (isMountedRef.current) {
+        setUser(null);
+        setSession(null);
+        setRole(null);
+        setOwnerId(null);
+      }
     }
   };
 

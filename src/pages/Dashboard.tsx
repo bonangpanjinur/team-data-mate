@@ -120,8 +120,12 @@ const FIELD_TO_COLUMN: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const { role, user } = useAuth();
-  const { fields, canView } = useFieldAccess();
+  const { role, user, loading: authLoading } = useAuth();
+  const { fields, loading: fieldAccessLoading } = useFieldAccess();
+  
+  // Dashboard's own loading state
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  
   const [stats, setStats] = useState({ groups: 0, entries: 0, users: 0, links: 0 });
   const [statusData, setStatusData] = useState<StatusStat[]>([]);
   const [groupData, setGroupData] = useState<GroupStat[]>([]);
@@ -133,149 +137,202 @@ export default function Dashboard() {
 
   const visibleFields = fields.filter((f) => f.can_view);
 
+  // Main data fetching - only starts after AuthContext is fully loaded
   useEffect(() => {
+    // Wait for AuthContext to finish loading
+    if (authLoading) {
+      setDashboardLoading(true);
+      return;
+    }
+
     const fetchStats = async () => {
-      const isSuperAdmin = role === "super_admin";
-      let entriesQuery = supabase.from("data_entries").select("id", { count: "exact", head: true });
-      if (!isSuperAdmin && user) entriesQuery = entriesQuery.eq("created_by", user.id);
+      try {
+        const isSuperAdmin = role === "super_admin";
+        let entriesQuery = supabase.from("data_entries").select("id", { count: "exact", head: true });
+        if (!isSuperAdmin && user) entriesQuery = entriesQuery.eq("created_by", user.id);
 
-      const [groupsRes, entriesRes] = await Promise.all([
-        supabase.from("groups").select("id", { count: "exact", head: true }),
-        entriesQuery,
-      ]);
+        const [groupsRes, entriesRes] = await Promise.all([
+          supabase.from("groups").select("id", { count: "exact", head: true }),
+          entriesQuery,
+        ]);
 
-      let usersCount = 0;
-      let linksCount = 0;
+        let usersCount = 0;
+        let linksCount = 0;
 
-      if (role === "super_admin") {
-        const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true });
-        usersCount = count ?? 0;
+        if (role === "super_admin") {
+          const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true });
+          usersCount = count ?? 0;
+        }
+
+        const { count: linkCount } = await supabase
+          .from("shared_links")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user?.id ?? "");
+        linksCount = linkCount ?? 0;
+
+        setStats({
+          groups: groupsRes.count ?? 0,
+          entries: entriesRes.count ?? 0,
+          users: usersCount,
+          links: linksCount,
+        });
+      } catch (err) {
+        console.error("[Dashboard] Error fetching stats:", err);
       }
-
-      const { count: linkCount } = await supabase
-        .from("shared_links")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user?.id ?? "");
-      linksCount = linkCount ?? 0;
-
-      setStats({
-        groups: groupsRes.count ?? 0,
-        entries: entriesRes.count ?? 0,
-        users: usersCount,
-        links: linksCount,
-      });
     };
 
     const fetchChartData = async () => {
-      const isSuperAdmin = role === "super_admin";
-      let statusQuery = supabase.from("data_entries").select("status");
-      if (!isSuperAdmin && user) statusQuery = statusQuery.eq("created_by", user.id);
-      const { data: entries } = await statusQuery;
-      if (entries) {
-        const counts: Record<string, number> = {};
-        entries.forEach((e) => { counts[e.status] = (counts[e.status] || 0) + 1; });
-        setStatusData(
-          Object.entries(counts).map(([status, count]) => ({
-            status,
-            label: STATUS_LABELS[status] || status,
-            count,
-            fill: STATUS_COLORS[status] || "hsl(var(--primary))",
-          }))
-        );
-      }
+      try {
+        const isSuperAdmin = role === "super_admin";
+        let statusQuery = supabase.from("data_entries").select("status");
+        if (!isSuperAdmin && user) statusQuery = statusQuery.eq("created_by", user.id);
+        const { data: entries } = await statusQuery;
+        if (entries) {
+          const counts: Record<string, number> = {};
+          entries.forEach((e) => { counts[e.status] = (counts[e.status] || 0) + 1; });
+          setStatusData(
+            Object.entries(counts).map(([status, count]) => ({
+              status,
+              label: STATUS_LABELS[status] || status,
+              count,
+              fill: STATUS_COLORS[status] || "hsl(var(--primary))",
+            }))
+          );
+        }
 
-      let groupQuery = supabase.from("data_entries").select("group_id, groups(name)");
-      if (!isSuperAdmin && user) groupQuery = groupQuery.eq("created_by", user.id);
-      const { data: entryGroups } = await groupQuery;
-      if (entryGroups) {
-        const groupCounts: Record<string, { name: string; count: number }> = {};
-        entryGroups.forEach((e: any) => {
-          const gid = e.group_id;
-          if (!groupCounts[gid]) groupCounts[gid] = { name: e.groups?.name || "Unknown", count: 0 };
-          groupCounts[gid].count++;
-        });
-        setGroupData(Object.values(groupCounts).sort((a, b) => b.count - a.count).slice(0, 10));
+        let groupQuery = supabase.from("data_entries").select("group_id, groups(name)");
+        if (!isSuperAdmin && user) groupQuery = groupQuery.eq("created_by", user.id);
+        const { data: entryGroups } = await groupQuery;
+        if (entryGroups) {
+          const groupCounts: Record<string, { name: string; count: number }> = {};
+          entryGroups.forEach((e: any) => {
+            const gid = e.group_id;
+            if (!groupCounts[gid]) groupCounts[gid] = { name: e.groups?.name || "Unknown", count: 0 };
+            groupCounts[gid].count++;
+          });
+          setGroupData(Object.values(groupCounts).sort((a, b) => b.count - a.count).slice(0, 10));
+        }
+      } catch (err) {
+        console.error("[Dashboard] Error fetching chart data:", err);
       }
     };
 
     const fetchRecentEntries = async () => {
-      const isSuperAdmin = role === "super_admin";
-      let recentQuery = supabase
-        .from("data_entries")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (!isSuperAdmin && user) recentQuery = recentQuery.eq("created_by", user.id);
-      const { data } = await recentQuery;
-      setRecentEntries(data ?? []);
+      try {
+        const isSuperAdmin = role === "super_admin";
+        let recentQuery = supabase
+          .from("data_entries")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (!isSuperAdmin && user) recentQuery = recentQuery.eq("created_by", user.id);
+        const { data } = await recentQuery;
+        setRecentEntries(data ?? []);
+      } catch (err) {
+        console.error("[Dashboard] Error fetching recent entries:", err);
+      }
     };
 
-    fetchStats();
-    fetchChartData();
-    fetchRecentEntries();
-  }, [role, user]);
+    // Execute all fetches in parallel
+    const executeAllFetches = async () => {
+      setDashboardLoading(true);
+      try {
+        await Promise.all([
+          fetchStats(),
+          fetchChartData(),
+          fetchRecentEntries(),
+        ]);
+      } finally {
+        setDashboardLoading(false);
+      }
+    };
+
+    executeAllFetches();
+  }, [role, user, authLoading]);
 
   // Financial stats for super_admin
   useEffect(() => {
-    if (role !== "super_admin") return;
+    if (role !== "super_admin" || authLoading) return;
+    
     const fetchFinancial = async () => {
-      // Get all invoices
-      const { data: invoices } = await (supabase as any).from("owner_invoices").select("amount, status, period, owner_id");
-      if (invoices) {
-        const totalPaid = invoices.filter((i: any) => i.status === "paid").reduce((s: number, i: any) => s + (i.amount || 0), 0);
-        const totalPending = invoices.filter((i: any) => i.status === "pending").reduce((s: number, i: any) => s + (i.amount || 0), 0);
-        const activeOwners = new Set(invoices.map((i: any) => i.owner_id)).size;
+      try {
+        // Get all invoices
+        const { data: invoices } = await (supabase as any).from("owner_invoices").select("amount, status, period, owner_id");
+        if (invoices) {
+          const totalPaid = invoices.filter((i: any) => i.status === "paid").reduce((s: number, i: any) => s + (i.amount || 0), 0);
+          const totalPending = invoices.filter((i: any) => i.status === "pending").reduce((s: number, i: any) => s + (i.amount || 0), 0);
+          const activeOwners = new Set(invoices.map((i: any) => i.owner_id)).size;
 
-        // Monthly revenue (paid only, last 12 months)
-        const monthlyMap: Record<string, number> = {};
-        invoices.filter((i: any) => i.status === "paid").forEach((i: any) => {
-          if (i.period) monthlyMap[i.period] = (monthlyMap[i.period] || 0) + (i.amount || 0);
-        });
-        const monthly = Object.entries(monthlyMap)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .slice(-12)
-          .map(([period, amount]) => ({ period, amount }));
-        
-        setMonthlyRevenue(monthly);
-        
-        // Count sertifikat_selesai
-        const { count: certCount } = await supabase.from("data_entries").select("id", { count: "exact", head: true }).eq("status", "sertifikat_selesai");
-        
-        setFinancialStats({ totalPaid, totalPending, activeOwners, totalCerts: certCount ?? 0 });
+          // Monthly revenue (paid only, last 12 months)
+          const monthlyMap: Record<string, number> = {};
+          invoices.filter((i: any) => i.status === "paid").forEach((i: any) => {
+            if (i.period) monthlyMap[i.period] = (monthlyMap[i.period] || 0) + (i.amount || 0);
+          });
+          const monthly = Object.entries(monthlyMap)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .slice(-12)
+            .map(([period, amount]) => ({ period, amount }));
+          
+          setMonthlyRevenue(monthly);
+          
+          // Count sertifikat_selesai
+          const { count: certCount } = await supabase.from("data_entries").select("id", { count: "exact", head: true }).eq("status", "sertifikat_selesai");
+          
+          setFinancialStats({ totalPaid, totalPending, activeOwners, totalCerts: certCount ?? 0 });
+        }
+      } catch (err) {
+        console.error("[Dashboard] Error fetching financial data:", err);
       }
     };
+    
     fetchFinancial();
-  }, [role]);
+  }, [role, authLoading]);
 
   // Admin performance stats for super_admin
   useEffect(() => {
-    if (role !== "super_admin") return;
+    if (role !== "super_admin" || authLoading) return;
+    
     const fetchAdminStats = async () => {
-      let query = supabase.from("data_entries").select("created_by");
-      if (adminPeriod === "today") {
-        query = query.gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
-      } else if (adminPeriod === "week") {
-        const d = new Date(); d.setDate(d.getDate() - 7);
-        query = query.gte("created_at", d.toISOString());
-      } else if (adminPeriod === "month") {
-        const d = new Date(); d.setMonth(d.getMonth() - 1);
-        query = query.gte("created_at", d.toISOString());
+      try {
+        let query = supabase.from("data_entries").select("created_by");
+        if (adminPeriod === "today") {
+          query = query.gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
+        } else if (adminPeriod === "week") {
+          const d = new Date(); d.setDate(d.getDate() - 7);
+          query = query.gte("created_at", d.toISOString());
+        } else if (adminPeriod === "month") {
+          const d = new Date(); d.setMonth(d.getMonth() - 1);
+          query = query.gte("created_at", d.toISOString());
+        }
+        const { data: entries } = await query;
+        if (!entries) return;
+        const counts: Record<string, number> = {};
+        entries.forEach((e: any) => { if (e.created_by) counts[e.created_by] = (counts[e.created_by] || 0) + 1; });
+        const userIds = Object.keys(counts);
+        if (userIds.length === 0) { setAdminStats([]); return; }
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
+        const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name || p.email || "Unknown"]));
+        const stats: AdminStat[] = userIds
+          .map((uid) => ({ user_id: uid, name: profileMap.get(uid) || "Unknown", count: counts[uid] }))
+          .sort((a, b) => b.count - a.count);
+        setAdminStats(stats);
+      } catch (err) {
+        console.error("[Dashboard] Error fetching admin stats:", err);
       }
-      const { data: entries } = await query;
-      if (!entries) return;
-      const counts: Record<string, number> = {};
-      entries.forEach((e: any) => { if (e.created_by) counts[e.created_by] = (counts[e.created_by] || 0) + 1; });
-      const userIds = Object.keys(counts);
-      if (userIds.length === 0) { setAdminStats([]); return; }
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
-      const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name || p.email || "Unknown"]));
-      const stats: AdminStat[] = userIds
-        .map((uid) => ({ user_id: uid, name: profileMap.get(uid) || "Unknown", count: counts[uid] }))
-        .sort((a, b) => b.count - a.count);
-      setAdminStats(stats);
     };
+    
     fetchAdminStats();
-  }, [role, adminPeriod]);
+  }, [role, adminPeriod, authLoading]);
+
+  // Show loading indicator while AuthContext or Dashboard is loading
+  if (authLoading || dashboardLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">Memuat dashboard...</p>
+      </div>
+    );
+  }
 
   const cards = [
     { label: "Group Halal", value: stats.groups, icon: FolderOpen, show: true },
