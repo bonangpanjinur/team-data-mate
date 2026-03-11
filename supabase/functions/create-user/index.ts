@@ -38,7 +38,7 @@ serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
-      .single();
+      .maybeSingle();
 
     if (roleError) {
       console.error(`[create-user] Failed to fetch caller role: ${roleError.message}`);

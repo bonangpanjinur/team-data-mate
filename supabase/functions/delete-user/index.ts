@@ -42,7 +42,7 @@ serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", callerId)
-      .single();
+      .maybeSingle();
 
     if (roleError) {
       console.error(`[delete-user] Failed to fetch caller role: ${roleError.message}`);

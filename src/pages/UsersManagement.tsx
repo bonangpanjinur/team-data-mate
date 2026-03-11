@@ -65,21 +65,33 @@ export default function UsersManagement() {
     setCreating(true);
 
     try {
+      console.log("[UsersManagement] Invoking create-user with:", { email: newEmail, role: newRole });
+      
       const { data, error } = await supabase.functions.invoke("create-user", {
         body: { email: newEmail, password: newPassword, full_name: newName, role: newRole },
       });
+
+      console.log("[UsersManagement] Response received:", { data, error });
 
       setCreating(false);
 
       // Extract error message from various possible locations
       let errorMsg: string | null = null;
+      
       if (error) {
+        console.error("[UsersManagement] Error object:", error);
         // Try to get the response body from the edge function error context
         try {
-          const ctx = await (error as any).context?.json?.();
-          errorMsg = ctx?.error || error.message;
-        } catch {
-          errorMsg = error.message;
+          if ((error as any).context) {
+            const responseBody = await (error as any).context.json();
+            console.log("[UsersManagement] Parsed error response:", responseBody);
+            errorMsg = responseBody?.error || error.message;
+          } else {
+            errorMsg = error.message || "Terjadi kesalahan pada server";
+          }
+        } catch (parseErr) {
+          console.error("[UsersManagement] Failed to parse error context:", parseErr);
+          errorMsg = error.message || "Terjadi kesalahan pada server";
         }
       } else if (data?.error) {
         errorMsg = data.error;
@@ -102,6 +114,7 @@ export default function UsersManagement() {
       }
     } catch (err: any) {
       setCreating(false);
+      console.error("[UsersManagement] Unexpected error:", err);
       toast({ title: "Gagal membuat user", description: err.message, variant: "destructive" });
     }
   };
