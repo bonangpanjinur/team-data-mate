@@ -100,3 +100,16 @@ Jika ada masalah setelah deployment:
 - [Dokumentasi Vercel](https://vercel.com/docs)
 - [Dokumentasi Supabase](https://supabase.com/docs)
 - [Vite Environment Variables](https://vitejs.dev/guide/env-and-mode.html)
+
+## Pengaturan Tambahan: Menonaktifkan Konfirmasi Email
+
+Secara default, Supabase mewajibkan user untuk melakukan konfirmasi email setelah mendaftar. Jika Anda ingin user bisa langsung login tanpa konfirmasi:
+
+1.  Buka [Dashboard Supabase](https://supabase.com/dashboard).
+2.  Pilih proyek Anda.
+3.  Pergi ke **Authentication > Settings**.
+4.  Cari bagian **Email Auth**.
+5.  Nonaktifkan (OFF) opsi **Confirm email**.
+6.  Klik **Save**.
+
+Setelah ini, setiap user yang mendaftar melalui halaman `/register` di aplikasi akan bisa langsung login tanpa perlu membuka email konfirmasi.
