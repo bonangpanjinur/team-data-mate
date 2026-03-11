@@ -97,12 +97,24 @@ export default function OwnerTeam() {
     setCreating(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("create-user", {
+      const { data, error: invokeError } = await supabase.functions.invoke("create-user", {
         body: { email, password, fullName, role: selectedRole },
       });
 
-      if (error || data?.error) {
-        throw new Error(data?.error || error?.message || "Gagal membuat user");
+      let errorMessage = null;
+      if (invokeError) {
+        try {
+          const body = await invokeError.context.json();
+          errorMessage = body.error || invokeError.message;
+        } catch {
+          errorMessage = invokeError.message;
+        }
+      } else if (data?.error) {
+        errorMessage = data.error;
+      }
+
+      if (errorMessage) {
+        throw new Error(errorMessage);
       }
 
       const newUserId = data.user?.id;
