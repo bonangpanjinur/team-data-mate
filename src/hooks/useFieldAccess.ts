@@ -14,7 +14,8 @@ export function useFieldAccess(targetRole?: string) {
   const [loading, setLoading] = useState(true);
 
   const effectiveRole = targetRole || role;
-  const isSuperRole = effectiveRole === "super_admin" || effectiveRole === "admin";
+  // Super roles and owner role should have full access by default
+  const isSuperRole = effectiveRole === "super_admin" || effectiveRole === "admin" || effectiveRole === "owner";
 
   useEffect(() => {
     if (!effectiveRole) return;
