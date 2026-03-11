@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Users, Loader2, KeyRound } from "lucide-react";
+import { Plus, Trash2, Users, Loader2, KeyRound, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -236,6 +237,12 @@ export default function OwnerTeam() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateMember} className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Anda hanya bisa membuat anggota tim dengan role: Admin, Admin Input, Lapangan, atau NIB.
+                </AlertDescription>
+              </Alert>
               <div className="space-y-2">
                 <Label>Nama Lengkap</Label>
                 <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nama lengkap" required />

@@ -33,64 +33,127 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .single();
-    setRole(data?.role ?? null);
-    return data?.role ?? null;
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .single();
+
+      if (error) {
+        console.warn(`[AuthContext] Error fetching role for user ${userId}:`, error.message);
+        setRole(null);
+        return null;
+      }
+
+      setRole(data?.role ?? null);
+      return data?.role ?? null;
+    } catch (err) {
+      console.error(`[AuthContext] Unexpected error fetching role:`, err);
+      setRole(null);
+      return null;
+    }
   };
 
   const fetchOwnerId = async (userId: string, userRole: AppRole | null) => {
-    // If user is owner, their ownerId is themselves
-    if (userRole === "owner") {
-      setOwnerId(userId);
-      return;
-    }
-    // If user is super_admin or umkm, no owner context
-    if (userRole === "super_admin" || userRole === "umkm" || !userRole) {
+    try {
+      // If user is owner, their ownerId is themselves
+      if (userRole === "owner") {
+        setOwnerId(userId);
+        return;
+      }
+      // If user is super_admin or umkm, no owner context
+      if (userRole === "super_admin" || userRole === "umkm" || !userRole) {
+        setOwnerId(null);
+        return;
+      }
+      // For team members (admin, admin_input, lapangan, nib), get their owner
+      const { data, error } = await supabase
+        .from("owner_teams")
+        .select("owner_id")
+        .eq("user_id", userId)
+        .single();
+
+      if (error) {
+        console.warn(`[AuthContext] Error fetching owner for user ${userId}:`, error.message);
+        setOwnerId(null);
+        return;
+      }
+
+      setOwnerId(data?.owner_id ?? null);
+    } catch (err) {
+      console.error(`[AuthContext] Unexpected error fetching owner:`, err);
       setOwnerId(null);
-      return;
     }
-    // For team members (admin, admin_input, lapangan, nib), get their owner
-    const { data } = await supabase
-      .from("owner_teams")
-      .select("owner_id")
-      .eq("user_id", userId)
-      .single();
-    setOwnerId(data?.owner_id ?? null);
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Get current session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        // Fetch role and owner only if user exists
+        if (currentSession?.user) {
+          const userRole = await fetchRole(currentSession.user.id);
+          if (isMounted) {
+            await fetchOwnerId(currentSession.user.id, userRole);
+          }
+        } else {
+          if (isMounted) {
+            setRole(null);
+            setOwnerId(null);
+          }
+        }
+      } catch (err) {
+        console.error(`[AuthContext] Error during initialization:`, err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Initialize auth state
+    initializeAuth();
+
+    // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
+
         if (session?.user) {
-          setTimeout(async () => {
-            const userRole = await fetchRole(session.user.id);
+          const userRole = await fetchRole(session.user.id);
+          if (isMounted) {
             await fetchOwnerId(session.user.id, userRole);
-          }, 0);
+          }
         } else {
-          setRole(null);
-          setOwnerId(null);
+          if (isMounted) {
+            setRole(null);
+            setOwnerId(null);
+          }
         }
-        setLoading(false);
+
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const userRole = await fetchRole(session.user.id);
-        await fetchOwnerId(session.user.id, userRole);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {

@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Pencil, KeyRound, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Pencil, KeyRound, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -174,6 +175,12 @@ export default function UsersManagement() {
               <DialogDescription>Isi data untuk membuat akun user baru.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Sebagai Super Admin, Anda bisa membuat user dengan semua role: Owner, Admin, Admin Input, Lapangan, NIB, dan UMKM.
+                </AlertDescription>
+              </Alert>
               <div className="space-y-2">
                 <Label>Nama Lengkap</Label>
                 <Input value={newName} onChange={(e) => setNewName(e.target.value)} required />
